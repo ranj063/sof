@@ -70,6 +70,160 @@
 #define iGS(x) ((x >> SOF_GLB_TYPE_SHIFT) & 0xf)
 #define iCS(x) ((x >> SOF_CMD_TYPE_SHIFT) & 0xfff)
 
+static void debug_print_ipc_header(struct sof_ipc_hdr *hdr)
+{
+	trace_ipc("ipc size: %d\n", hdr->size);
+}
+
+static void debug_print_ipc_cmd_header(struct sof_ipc_cmd_hdr *hdr)
+{
+	trace_ipc("ipc header cmd: 0x%x size: %d\n", hdr->cmd, hdr->size);
+}
+
+static void debug_print_ipc_dai_config(struct sof_ipc_dai_config *config)
+{
+	int j;
+
+	debug_print_ipc_cmd_header(&config->hdr);
+	trace_ipc("type: %d dai_index: %d format: %d",
+		config->type, config->dai_index, config->format);
+
+	switch (config->type) {
+	case SOF_DAI_INTEL_SSP:
+		debug_print_ipc_header(&config->ssp.hdr);
+		trace_ipc("mclk %d bclk %d",
+			   config->ssp.mclk_rate, config->ssp.bclk_rate);
+		trace_ipc("fclk %d width (%d)%d",
+			  config->ssp.fsync_rate, config->ssp.sample_valid_bits,
+			  config->ssp.tdm_slot_width);
+		trace_ipc("slots %d mclk id %d",
+			  config->ssp.tdm_slots, config->ssp.mclk_id);
+		break;
+	case SOF_DAI_INTEL_DMIC:
+		debug_print_ipc_header(&config->dmic.hdr);
+		trace_ipc("tplg: config DMIC%d driver version %d",
+			config->dai_index, config->dmic.driver_ipc_version);
+		trace_ipc("pdmclk_min %d pdm_clkmax %d duty_min %hd",
+			config->dmic.pdmclk_min, config->dmic.pdmclk_max,
+			config->dmic.duty_min);
+		trace_ipc("duty_max %hd fifo_fs %d num_pdms active %d",
+			config->dmic.duty_max, config->dmic.fifo_fs_a,
+			config->dmic.num_pdm_active);
+		trace_ipc("fifo word length %hd",
+			config->dmic.fifo_bits_a);
+
+		for (j = 0; j < config->dmic.num_pdm_active; j++) {
+			debug_print_ipc_header(&config->dmic.pdm[j].hdr);
+			trace_ipc("pdm %hd mic a %hd mic b %hd\n",
+				config->dmic.pdm[j].id,
+				config->dmic.pdm[j].enable_mic_a,
+				config->dmic.pdm[j].enable_mic_b);
+			trace_ipc("pdm %hd polarity a %hd polarity b %hd\n",
+				config->dmic.pdm[j].id,
+				config->dmic.pdm[j].polarity_mic_a,
+				config->dmic.pdm[j].polarity_mic_b);
+			trace_ipc("pdm %hd clk_edge %hd skew %hd\n",
+				config->dmic.pdm[j].id,
+				config->dmic.pdm[j].clk_edge,
+				config->dmic.pdm[j].skew);
+		}
+		break;
+	case SOF_DAI_INTEL_HDA:
+		debug_print_ipc_header(&config->hda.hdr);
+		trace_ipc("link_dma_ch %d",
+			config->hda.link_dma_ch);
+		break;
+	default:
+		break;
+	}
+}
+
+static void debug_print_ipc_comp(struct sof_ipc_comp *comp)
+{
+	debug_print_ipc_cmd_header(&comp->hdr);
+	trace_ipc("id: %d type: %d pipeline_id: %d",
+		  comp->id, comp->type, comp->pipeline_id);
+}
+
+static void debug_print_ipc_comp_config(struct sof_ipc_comp_config *config)
+{
+		trace_ipc("config header\n");
+		debug_print_ipc_cmd_header(&config->hdr);
+		trace_ipc("periods_sink: %d periods_source: %d",
+			  config->periods_sink, config->periods_source);
+		trace_ipc("preload_count: %d frame_fmt: %d",
+				config->preload_count, config->frame_fmt);
+		trace_ipc("xrun_action: %d\n", config->xrun_action);
+}
+
+static void debug_print_ipc_comp_data(void *comp_data)
+{
+	struct sof_ipc_comp *comp = (struct sof_ipc_comp *)comp_data;
+	struct sof_ipc_comp_volume *volume;
+	struct sof_ipc_buffer *buffer;
+	struct sof_ipc_comp_host *host;
+	struct sof_ipc_comp_dai *comp_dai;
+
+	debug_print_ipc_comp(comp);
+
+	switch (comp->type) {
+	case SOF_COMP_HOST:
+	case SOF_COMP_SG_HOST:
+		host = (struct sof_ipc_comp_host *)comp_data;
+		debug_print_ipc_comp(&host->comp);
+		debug_print_ipc_comp_config(&host->config);
+		trace_ipc("direction: %d no_irq: %d dmac_config: %d\n",
+			host->direction, host->no_irq, host->dmac_config);
+		break;
+	case SOF_COMP_DAI:
+	case SOF_COMP_SG_DAI:
+		comp_dai = (struct sof_ipc_comp_dai *)comp_data;
+		debug_print_ipc_comp(&comp_dai->comp);
+		debug_print_ipc_comp_config(&comp_dai->config);
+		trace_ipc("dir: %d dai_index: %d",
+			  comp_dai->direction, comp_dai->dai_index);
+		trace_ipc("type: %d dmac_config: %d\n",
+			 comp_dai->type, comp_dai->dmac_config);
+		break;
+	case SOF_COMP_VOLUME:
+		volume = (struct sof_ipc_comp_volume *)comp_data;
+		debug_print_ipc_comp(&volume->comp);
+		debug_print_ipc_comp_config(&volume->config);
+		trace_ipc("channels: %d min_value %d",
+			volume->channels, volume->min_value);
+		trace_ipc("max_value %d ramp %d initial_ramp %d\n",
+			volume->max_value,
+			volume->ramp, volume->initial_ramp);
+		break;
+	case SOF_COMP_BUFFER:
+		buffer = (struct sof_ipc_buffer *)comp_data;
+		debug_print_ipc_comp(&buffer->comp);
+		trace_ipc("size: %d caps: %d\n",
+			  buffer->size, buffer->caps);
+		break;
+	default:
+		break;
+	}
+}
+
+static void debug_print_ipc_pipe_data(void *comp_data)
+{
+	struct sof_ipc_pipe_new *pipeline =
+		(struct sof_ipc_pipe_new *)comp_data;
+
+	debug_print_ipc_cmd_header(&pipeline->hdr);
+	trace_ipc("comp_id: %d pipeline_id: %d\n",
+		pipeline->comp_id, pipeline->pipeline_id);
+	trace_ipc("sched_id: %d core: %d\n",
+		pipeline->sched_id, pipeline->core);
+	trace_ipc("deadline: %d priority: %d\n",
+		pipeline->deadline, pipeline->priority);
+	trace_ipc("period_mips: %d frames_per_sched: %d\n",
+		pipeline->period_mips, pipeline->frames_per_sched);
+	trace_ipc("xrun_limit_usecs: %d timer_delay: %d\n",
+		pipeline->xrun_limit_usecs, pipeline->timer_delay);
+}
+
 /*
  * IPC ABI version compatibility rules :-
  *
@@ -538,6 +692,8 @@ static int ipc_dai_config(uint32_t header)
 	trace_ipc("ipc: dai %d,%d -> config ", config.type,
 		  config.dai_index);
 
+	debug_print_ipc_dai_config(_ipc->comp_data);
+
 	/* get DAI */
 	dai = dai_get(config.type, config.dai_index, 0 /* existing only */);
 	if (dai == NULL) {
@@ -910,6 +1066,8 @@ static int ipc_glb_tplg_comp_new(uint32_t header)
 	trace_ipc("ipc: pipe %d comp %d -> new (type %d)", comp.pipeline_id,
 		  comp.id, comp.type);
 
+	debug_print_ipc_comp_data(_ipc->comp_data);
+
 	/* register component */
 	ret = ipc_comp_new(_ipc, (struct sof_ipc_comp *)_ipc->comp_data);
 	if (ret < 0) {
@@ -940,6 +1098,8 @@ static int ipc_glb_tplg_buffer_new(uint32_t header)
 		  ipc_buffer.comp.pipeline_id, ipc_buffer.comp.id,
 		  ipc_buffer.size);
 
+	debug_print_ipc_comp_data(_ipc->comp_data);
+
 	ret = ipc_buffer_new(_ipc, (struct sof_ipc_buffer *)_ipc->comp_data);
 	if (ret < 0) {
 		trace_ipc_error("ipc: pipe %d buffer %d creation failed %d",
@@ -967,6 +1127,8 @@ static int ipc_glb_tplg_pipe_new(uint32_t header)
 	IPC_COPY_CMD(ipc_pipeline, _ipc->comp_data);
 
 	trace_ipc("ipc: pipe %d -> new", ipc_pipeline.pipeline_id);
+
+	debug_print_ipc_pipe_data(_ipc->comp_data);
 
 	ret = ipc_pipeline_new(_ipc,
 			       (struct sof_ipc_pipe_new *)_ipc->comp_data);
