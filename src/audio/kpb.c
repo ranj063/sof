@@ -241,12 +241,73 @@ static int kpb_copy(struct comp_dev *dev)
 			kpb_buffer_data(kpb, source);
 	} else
 		ret = -EINVAL;
-
 	return ret;
 }
 
+/**
+ * kpb_buffer_data() - buffer real time data stream in
+ * the internal buffer.
+ *
+ * @arg1:  kpb component.
+ * @arg2:  pointer to the source.
+ *
+ * Return: integer representing either 0 - success
+ * or -EINVAL - failure.
+ */
 static void kpb_buffer_data(struct comp_data *kpb, struct comp_buffer *source)
 {
+trace_kpb("kpb_buffer_data()");
+
+#if KPB_NO_OF_HISTORY_BUFFERS == 2
+	int size_to_copy = source->avail;
+
+	while (size_to_copy) {
+		struct history_buffer *hb =
+		(kpb->his_buf_lp.state == KPB_BUFFER_FREE) ?
+		&kpb->his_buf_lp : &kpb->his_buf_hp;
+		int space_avail = (int)hb->end_addr - (int)hb->w_ptr;
+
+		if (size_to_copy > space_avail) {
+			memcpy(hb->w_ptr, source->r_ptr, space_avail);
+			size_to_copy = size_to_copy - space_avail;
+			hb->w_ptr = hb->sta_addr;
+			hb->state = KPB_BUFFER_FULL;
+
+			if (hb->id == KPB_LP)
+				kpb->his_buf_hp.state = KPB_BUFFER_FREE;
+			else
+				kpb->his_buf_lp.state = KPB_BUFFER_FREE;
+		} else  {
+			memcpy(hb->w_ptr, source->r_ptr, size_to_copy);
+			hb->w_ptr += size_to_copy;
+			size_to_copy = 0;
+		}
+	}
+#elif KPB_NO_OF_HISTORY_BUFFERS == 1
+	struct history_buffer *hb = &kpb->his_buf_hp;
+
+	int space_avail = hb->end_addr - hb->w_ptr;
+
+	if (size_to_copy > space_avail) {
+		/* We need to split copying into two parts
+		 * and wrap buffer pointer
+		 */
+		memcpy(hb->w_ptr, source->r_ptr, space_avail);
+		size_to_copy = size_to_copy - space_avail;
+		hb->w_ptr = hb->sta_addr;
+		memcpy(hb->w_ptr, source->r_ptr, size_to_copy);
+		hb->w_ptr += size_to_copy;
+		size_to_copy = 0;
+
+	} else {
+		memcpy(kpb->w_ptr, source->data_ptr, size_to_copy);
+		kpb->w_ptr += size_to_copy;
+		size_to_copy = 0;
+	}
+#else
+#error "Wrong number of key phrase buffers configured"
+#endif
+
 }
 
 /**
