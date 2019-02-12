@@ -9,4 +9,5 @@ EXTRA_DIST = \
 	src.m4 \
 	tone.m4 \
 	mux.m4 \
+	enumcontrol.m4 \
 	utils.m4
