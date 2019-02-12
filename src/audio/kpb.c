@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2019, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
  *
  * Author: Marcin Rajwa <marcin.rajwa@linux.intel.com>
  *
+ * A key phrase buffer component.
  */
 
 #include <stdint.h>
@@ -38,14 +39,14 @@
 #include <sof/audio/buffer.h>
 
 static int kpb_register_client(struct comp_dev *dev, struct kpb_client *cli);
-static int kpb_begin_drainning(struct comp_dev *dev, uint8_t client_id);
+static int kpb_begin_draining(struct comp_dev *dev, uint8_t client_id);
 static void kpb_buffer_data(struct comp_data *kpb, struct comp_buffer *source);
 
 /**
- * kpb_new() - create a key phrase buffer component.
- * @arg1: generic ipc component pointer.
+ * \brief Create a key phrase buffer component.
+ * \param[in] comp - generic ipc component pointer.
  *
- * Return: A pointer to newly created KPB component.
+ * \return: a pointer to newly created KPB component.
  */
 static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 {
@@ -62,32 +63,32 @@ static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 	}
 
 	/* Validate input parameters */
-	if (ipc_kpb->channels > MAX_SUPPORETED_CHANNELS) {
+	if (ipc_kpb->channels > KPB_MAX_SUPPORTED_CHANNELS) {
 		trace_kpb_error("kpb_new() error: "
 		"nr of channels exceeded the limit");
 		return NULL;
 	}
 
-	if (ipc_kpb->history_depth > MAX_BUFFER_SIZE) {
+	if (ipc_kpb->history_depth > KPB_MAX_BUFFER_SIZE) {
 		trace_kpb_error("kpb_new() error: "
 		"history depth exceeded the limit");
 		return NULL;
 	}
 
-	if (ipc_kpb->sampling_freq != MAX_SAMPLNG_FREQUENCY) {
+	if (ipc_kpb->sampling_freq != KPB_SAMPLNG_FREQUENCY) {
 		trace_kpb_error("kpb_new() error: "
 		"requested sampling frequency not supported");
 		return NULL;
 	}
 
-	if (ipc_kpb->sampling_width != SAMPLING_WIDTH) {
+	if (ipc_kpb->sampling_width != KPB_SAMPLING_WIDTH) {
 		trace_kpb_error("kpb_new() error: "
 		"requested sampling width not supported");
 		return NULL;
 	}
 
 	dev = rzalloc(RZONE_RUNTIME, SOF_MEM_CAPS_RAM,
-		      COMP_SIZE(struct sof_ipc_comp_kpb));
+		COMP_SIZE(struct sof_ipc_comp_kpb));
 	if (!dev)
 		return NULL;
 
@@ -99,17 +100,18 @@ static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 		rfree(dev);
 		return NULL;
 	}
-
 	cd->history_depth = ipc_kpb->history_depth;
 	comp_set_drvdata(dev, cd);
-
 	dev->state = COMP_STATE_READY;
+
 	return dev;
 }
 
 /**
- * kpb_free() - reclaim memory for a key phrase buffer.
- * @arg1: component device pointer
+ * \brief Reclaim memory for a key phrase buffer.
+ * \param[in] dev - component device pointer
+ *
+ * \return none
  */
 static void kpb_free(struct comp_dev *dev)
 {
@@ -129,11 +131,12 @@ static int kpb_trigger(struct comp_dev *dev, int cmd)
 }
 
 /**
- * kpb_prepare() - prepare key phrase buffer.
- * @arg1:  kpb component.
+ * \brief Prepare key phrase buffer.
+ * \param[in] dev - kpb component device pointer.
  *
- * Return: integer representing either 0 - success
- * or -EINVAL - failure.
+ * \return integer representing either
+ *	0 -> success
+ *	-EINVAL -> failure.
  */
 static int kpb_prepare(struct comp_dev *dev)
 {
@@ -144,7 +147,7 @@ static int kpb_prepare(struct comp_dev *dev)
 	trace_kpb("kpb_prepare()");
 
 	ret = comp_set_state(dev, COMP_TRIGGER_PREPARE);
-	if (ret < 0)
+	if (ret)
 		return ret;
 
 	cd->no_of_clients = 0;
@@ -153,18 +156,18 @@ static int kpb_prepare(struct comp_dev *dev)
 #if KPB_NO_OF_HISTORY_BUFFERS == 2
 
 	cd->his_buf_hp.sta_addr = rballoc(RZONE_RUNTIME, SOF_MEM_CAPS_RAM,
-					  MAX_BUFFER_SIZE - LPSRAM_SIZE);
+					  KPB_MAX_BUFFER_SIZE - LPSRAM_SIZE);
 	cd->his_buf_lp.sta_addr = rballoc(RZONE_RUNTIME, SOF_MEM_CAPS_LP,
 					  LPSRAM_SIZE);
 
-	if (cd->his_buf_hp.sta_addr || cd->his_buf_lp.sta_addr) {
+	if (!cd->his_buf_hp.sta_addr || !cd->his_buf_lp.sta_addr) {
 		trace_kpb_error("Failed to allocate space for "
 				"KPB bufefrs");
-		return -EINVAL;
+		return -ENOMEM;
 	}
 
 	cd->his_buf_hp.end_addr = cd->his_buf_hp.sta_addr +
-	(MAX_BUFFER_SIZE - LPSRAM_SIZE);
+	(KPB_MAX_BUFFER_SIZE - LPSRAM_SIZE);
 
 	cd->his_buf_lp.end_addr = cd->his_buf_lp.sta_addr +
 	LPSRAM_SIZE;
@@ -172,15 +175,15 @@ static int kpb_prepare(struct comp_dev *dev)
 #elif KPB_NO_OF_HISTORY_BUFFERS == 1
 
 	cd->his_buf_hp.sta_addr = rballoc(RZONE_RUNTIME, SOF_MEM_CAPS_RAM,
-					  MAX_BUFFER_SIZE);
+					  KPB_MAX_BUFFER_SIZE);
 
-	if (cd->his_buf_hp.sta_addr) {
+	if (!cd->his_buf_hp.sta_addr) {
 		trace_kpb_error("Failed to allocate space for "
 				"KPB bufefrs");
-	return -EINVAL;
+	return -ENOMEM;
 	}
 
-	cd->his_buf_hp.end_addr = cd->his_buf_hp.sta_addr + MAX_BUFFER_SIZE;
+	cd->his_buf_hp.end_addr = cd->his_buf_hp.sta_addr + KPB_MAX_BUFFER_SIZE;
 
 #else
 #error "Wrong number of key phrase buffers configured"
@@ -189,83 +192,104 @@ static int kpb_prepare(struct comp_dev *dev)
 	/* TODO: zeroes both buffers */
 
 	/* Initialize clients data */
-	for (i = 0; i < MAX_NO_OF_CLIENTS; i++)
+	for (i = 0; i < KPB_MAX_NO_OF_CLIENTS; i++)
 		cd->clients[i].state = KPB_CLIENT_UNREGISTERED;
 
 	return ret;
 }
 
 /**
- * kpb_copy() - copy real time input stream into sink buffer,
- * and in the same time buffers that input for
- * later use by some of clients.
+ * \brief Copy real time input stream into sink buffer,
+ *	and in the same time buffers that input for
+ *	later use by some of clients.
  *
- * @arg1:  kpb component.
+ *\param[in] dev - kpb component device pointer.
  *
- * Return: integer representing either 0 - success
- * or -EINVAL - failure.
+ * \return integer representing either
+ *	0 - success
+ *	-EINVAL - failure.
  */
 static int kpb_copy(struct comp_dev *dev)
 {
-	int ret;
+	int ret = 0;
+	int update_buffers = 0;
 	struct comp_data *kpb = comp_get_drvdata(dev);
 	struct comp_buffer *source;
 	struct comp_buffer *sink;
 
-	trace_kpb("kpb_copy()");
+	tracev_kpb("kpb_copy()");
 
-	/* Get source and sink buffers */
+	/* get source and sink buffers */
 	source = list_first_item(&dev->bsource_list, struct comp_buffer,
-				 source_list);
+				 sink_list);
 	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
-			       sink_list);
-	/* Process source data */
-	/* Check if source have data and valid pointer to read from */
-	if (source->avail > 0 && source && sink && source->r_ptr) {
-		/* Real time copying */
-		if (sink->free >= source->avail && sink->w_ptr) {
-			/* Sink and source are both ready and have space */
-			memcpy(sink->w_ptr, source->r_ptr,
-			       source->avail);
-
-			/* update source & snik data*/
-			comp_update_buffer_produce(sink, source->avail);
-			comp_update_buffer_consume(source, source->avail);
+			       source_list);
+	/* process source data */
+	/* check if there are valid pointers */
+	if (source && sink) {
+		if (!source->r_ptr || !sink->w_ptr) {
+			return -EINVAL;
+		} else if (sink->free < kpb->sink_period_bytes) {
+			trace_kpb_error("kpb_copy() error: "
+				   "sink component buffer"
+				   " has not enough free bytes for copy");
+			comp_overrun(dev, sink, kpb->sink_period_bytes, 0);
+			return -EIO; /* xrun */
+		} else if (source->avail < kpb->source_period_bytes) {
+			trace_kpb_error("kpb_copy() error: "
+					   "source component buffer"
+					   " has not enough data available");
+			comp_underrun(dev, source, kpb->source_period_bytes,
+				      0);
+			return -EIO; /* xrun */
 		} else {
-			;/* What should we do if sink isn't ready(state/size)?
-			  * Simple skip is OK?
-			  */
+			/* sink and source are both ready and have space */
+			/* TODO: copy sink or source period data here? */
+			memcpy(sink->w_ptr, source->r_ptr,
+			       kpb->sink_period_bytes);
+			/* signal update source & sink data */
+			update_buffers = 1;
 		}
-		/* Buffer source data internally for future use by clients */
-		if (source->avail <= MAX_BUFFER_SIZE)
+		/* buffer source data internally for future use by clients */
+		if (source->avail <= KPB_MAX_BUFFER_SIZE) {
+			/* TODO: should we copy what is available or just
+			 * a small portion of it?
+			 */
 			kpb_buffer_data(kpb, source);
-	} else
-		ret = -EINVAL;
+		}
+	} else {
+		ret = -EIO;
+	}
+
+	if (update_buffers) {
+		comp_update_buffer_produce(sink, kpb->sink_period_bytes);
+		comp_update_buffer_consume(source, kpb->sink_period_bytes);
+	}
 	return ret;
 }
 
 /**
- * kpb_buffer_data() - buffer real time data stream in
- * the internal buffer.
+ * \brief Buffer real time data stream in
+ *	the internal buffer.
  *
- * @arg1:  kpb component.
- * @arg2:  pointer to the source.
+ * \param[in] kpb - KPB component data pointer.
+ * \param[in] source pointer to the buffer source.
  *
- * Return: integer representing either 0 - success
- * or -EINVAL - failure.
+ * \return none
  */
 static void kpb_buffer_data(struct comp_data *kpb, struct comp_buffer *source)
 {
-trace_kpb("kpb_buffer_data()");
+	trace_kpb("kpb_buffer_data()");
+	int size_to_copy = kpb->source_period_bytes;
+	int space_avail;
+	struct history_buffer *hb;
 
 #if KPB_NO_OF_HISTORY_BUFFERS == 2
-	int size_to_copy = source->avail;
 
 	while (size_to_copy) {
-		struct history_buffer *hb =
-		(kpb->his_buf_lp.state == KPB_BUFFER_FREE) ?
+		hb = (kpb->his_buf_lp.state == KPB_BUFFER_FREE) ?
 		&kpb->his_buf_lp : &kpb->his_buf_hp;
-		int space_avail = (int)hb->end_addr - (int)hb->w_ptr;
+		space_avail = (int)hb->end_addr - (int)hb->w_ptr;
 
 		if (size_to_copy > space_avail) {
 			memcpy(hb->w_ptr, source->r_ptr, space_avail);
@@ -284,9 +308,8 @@ trace_kpb("kpb_buffer_data()");
 		}
 	}
 #elif KPB_NO_OF_HISTORY_BUFFERS == 1
-	struct history_buffer *hb = &kpb->his_buf_hp;
-
-	int space_avail = hb->end_addr - hb->w_ptr;
+	hb = &kpb->his_buf_hp;
+	space_avail = (int)hb->end_addr - (int)hb->w_ptr;
 
 	if (size_to_copy > space_avail) {
 		/* We need to split copying into two parts
@@ -311,15 +334,16 @@ trace_kpb("kpb_buffer_data()");
 }
 
 /**
- * kpb_cmd() - kpb event handler.
- * @arg1:  kpb component.
- * @arg2:  command to be executed
- * @arg3:  pointer to data related with request
- * @arg4:  maxiumum size of data
+ * \brief Kpb event handler.
+ * \param[in] dev - kpb device component pointer.
+ * \param[in] cmd - command to be executed
+ * \param[in] data pointer to data related with request
+ * \param[in] max_data_size - maxiumum size of data
  *
  *
- * Return: integer representing either 0 - success
- * or -EINVAL - failure.
+ * \return integer representing either
+ *	0 - success
+ *	-EINVAL - failure.
  */
 static int kpb_cmd(struct comp_dev *dev, int cmd, void *data,
 		   int max_data_size)
@@ -339,10 +363,10 @@ static int kpb_cmd(struct comp_dev *dev, int cmd, void *data,
 		/*TODO*/
 		ret = -EINVAL;
 		break;
-	case KPB_EVENT_BEGIN_DRAINNING:
-		ret = kpb_begin_drainning(dev, client_id);
+	case KPB_EVENT_BEGIN_DRAINING:
+		ret = kpb_begin_draining(dev, client_id);
 		break;
-	case KPB_EVENT_STOP_DRAINNING:
+	case KPB_EVENT_STOP_DRAINING:
 		/*TODO*/
 		ret = -EINVAL;
 		break;
@@ -357,16 +381,17 @@ static int kpb_cmd(struct comp_dev *dev, int cmd, void *data,
 }
 
 /**
- * kpb_begin_drainning() - drain internal buffer into client's
- * sink buffer.
+ * \brief Drain internal buffer into client's
+ *	sink buffer.
  *
- * @arg1:  kpb component.
- * @arg2:  clients id
+ * \param[in] dev - kpb device component pointer.
+ * \param[in] client_id - clients id
  *
- * Return: integer representing either 0 - success
- * or -EINVAL - failure.
+ * \return integer representing either
+ *	0 - success
+ *	-EINVAL - failure.
  */
-static int kpb_begin_drainning(struct comp_dev *dev, uint8_t client_id)
+static int kpb_begin_draining(struct comp_dev *dev, uint8_t client_id)
 {
 	int ret = 0;
 	struct comp_data *kpb = comp_get_drvdata(dev);
@@ -379,7 +404,7 @@ static int kpb_begin_drainning(struct comp_dev *dev, uint8_t client_id)
 	int copy_residue;
 	void *sink_w_ptr;
 
-	trace_kpb("kpb_begin_drainning()");
+	trace_kpb("kpb_begin_draining()");
 
 	struct list_item *sink_list = dev->bsink_list.next;
 
@@ -389,7 +414,7 @@ static int kpb_begin_drainning(struct comp_dev *dev, uint8_t client_id)
 	} while (--i);
 
 	if (!sink) {
-		trace_kpb_error("kpb_begin_drainning() error: "
+		trace_kpb_error("kpb_begin_draining() error: "
 				"requested draining for unregistered client");
 		return -EINVAL;
 	}
@@ -464,13 +489,14 @@ static int kpb_begin_drainning(struct comp_dev *dev, uint8_t client_id)
 }
 
 /**
- * kpb_register_client() - register clients in the system.
+ * \brief Register clients in the system.
  *
- * @arg1:  kpb component.
- * @arg2:  pointer kpb_client data.
+ * \param[in] dev - kpb device component pointer.
+ * \param[in] cli - pointer to KPB client's data.
  *
- * Return: integer representing either 0 - success
- * or -EINVAL - failure.
+ * \return integer representing either
+ *	0 - success
+ *	-EINVAL - failure.
  */
 static int kpb_register_client(struct comp_dev *dev, struct kpb_client *cli)
 {
@@ -485,8 +511,8 @@ static int kpb_register_client(struct comp_dev *dev, struct kpb_client *cli)
 		return -EINVAL;
 	}
 	/* Do we have a room for a new client? */
-	if (kpb->no_of_clients >= MAX_NO_OF_CLIENTS ||
-	    cli->id > MAX_NO_OF_CLIENTS) {
+	if (kpb->no_of_clients >= KPB_MAX_NO_OF_CLIENTS ||
+	    cli->id > KPB_MAX_NO_OF_CLIENTS) {
 		trace_kpb_error("kpb_register_client() error: "
 				"no free room for client = %u ",
 				cli->id);
@@ -516,7 +542,7 @@ static void kpb_cache(struct comp_dev *dev, int cmd)
 static int kpb_reset(struct comp_dev *dev)
 {
 	/* TODO: what data of KPB should we reset here? */
-	return -EINVAL;
+	return 0;
 }
 
 struct comp_driver comp_kpb = {
@@ -530,6 +556,7 @@ struct comp_driver comp_kpb = {
 		.prepare = kpb_prepare,
 		.reset = kpb_reset,
 		.cache = kpb_cache,
+		.params = NULL,
 	},
 };
 

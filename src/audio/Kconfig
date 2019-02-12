@@ -12,4 +12,10 @@ config COMP_SRC
 	help
 	  Select for SRC component
 
+  config COMP_KPB
+	bool "KPB component"
+	default y
+	help
+	  Select for KPB component
+
 endmenu

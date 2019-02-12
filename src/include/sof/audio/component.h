@@ -515,6 +515,11 @@ void sys_comp_eq_iir_init(void);
 void sys_comp_eq_fir_init(void);
 void sys_comp_keyword_init(void);
 
+#ifdef CONFIG_COMP_KPB
+void sys_comp_kpb_init(void);
+#else
+static inline void sys_comp_kpb_init(void) {}
+#endif
 /** @}*/
 
 /** \name Helpers.

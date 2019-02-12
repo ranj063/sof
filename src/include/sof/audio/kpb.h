@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2019, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,41 +33,41 @@
 #define __INCLUDE_AUDIO_KPB_H__
 
 #include <platform/platcfg.h>
+#include <sof/trace.h>
 
-/* kpb tracing */
+/* KPB tracing */
 #define trace_kpb(__e, ...) trace_event(TRACE_CLASS_KPB, __e, ##__VA_ARGS__)
 #define trace_kpb_error(__e, ...) (trace_error(TRACE_CLASS_KPB, __e, \
 					      ##__VA_ARGS__))
 #define tracev_kpb(__e, ...) tracev_event(TRACE_CLASS_KPB, __e, ##__VA_ARGS__)
 #define KPB_MAX_BUFF_TIME 2100 /* time of buffering in miliseconds */
-#define MAX_SUPPORETED_CHANNELS 2
-#define	SAMPLING_WIDTH 16 /* number of bits */
-#define	MAX_SAMPLNG_FREQUENCY 16000 /* max sampling frequency in Hz */
-#define NR_OF_CHANNELS 2
-#define SAMPLE_CONTAINER_SIZE ((SAMPLING_WIDTH == 32) ? 64 : 32)
-#define MAX_BUFFER_SIZE ((MAX_SAMPLNG_FREQUENCY / 1000) * \
-	(SAMPLE_CONTAINER_SIZE / 8) * KPB_MAX_BUFF_TIME * NR_OF_CHANNELS)
-#define MAX_NO_OF_CLIENTS 2
-#define LPSRAM_BANK_SIZE (64 * 1024) /* TODO: needs verification */
-#define LPSRAM_SIZE (PLATFORM_LPSRAM_EBB_COUNT * LPSRAM_BANK_SIZE)
+#define KPB_MAX_SUPPORTED_CHANNELS 2
+#define	KPB_SAMPLING_WIDTH 16 /* number of bits */
+#define	KPB_SAMPLNG_FREQUENCY 16000 /* max sampling frequency in Hz */
+#define KPB_NR_OF_CHANNELS 2
+#define KPB_SAMPLE_CONTAINER_SIZE ((KPB_SAMPLING_WIDTH == 32) ? 64 : 32)
+#define KPB_MAX_BUFFER_SIZE ((KPB_SAMPLNG_FREQUENCY / 1000) * \
+	(KPB_SAMPLE_CONTAINER_SIZE / 8) * KPB_MAX_BUFF_TIME * \
+	KPB_NR_OF_CHANNELS)
+#define KPB_MAX_NO_OF_CLIENTS 2
 #define KPB_NO_OF_HISTORY_BUFFERS 2 /* TODO: let kconfig handle this */
 
-enum kpb_pin_state {
-	KPB_PIN_BUSY = 0,
-	KPB_PIN_READY,
+enum kpb_sink_state {
+	KPB_SINK_BUSY = 0,
+	KPB_SINK_READY,
 };
 
-struct kpb_pin {
+struct kpb_sink {
 	uint32_t *data_ptr;
 	uint32_t data_size;
-	enum kpb_pin_state state;
+	enum kpb_sink_state state;
 };
 
 enum kpb_event {
 	KPB_EVENT_REGISTER_CLIENT = 0,
 	KPB_EVENT_UPDATE_PARAMS,
-	KPB_EVENT_BEGIN_DRAINNING,
-	KPB_EVENT_STOP_DRAINNING,
+	KPB_EVENT_BEGIN_DRAINING,
+	KPB_EVENT_STOP_DRAINING,
 	KPB_EVENT_UNREGISTER_CLIENT,
 };
 
@@ -80,15 +80,13 @@ enum kpb_client_state {
 	KPB_CLIENT_UNREGISTERED = 0,
 	KPB_CLIENT_BUFFERING,
 	KPB_CLIENT_DRAINNING,
-	KPB_CLIENT_DRAINNING_OD, /* draining on demand */
+	KPB_CLIENT_DRAINNING_OD, /**< draining on demand */
 };
 
 struct kpb_client {
-	uint8_t id; /* id associated with output sink */
-	uint32_t history_depth; /* normalized value of buffered bytes */
+	uint8_t id; /**< id associated with output sink */
+	uint32_t history_depth; /**< normalized value of buffered bytes */
 	enum kpb_client_state state;
-	//hist_Begin;?
-	//hist_end;?
 };
 
 enum buffer_state {
@@ -105,22 +103,24 @@ enum kpb_id {
 struct history_buffer {
 	enum kpb_id id;
 	enum buffer_state state;
-	void *w_ptr; /* buffer write pointer */
-	void *r_ptr; /* buffer read pointer */
+	void *w_ptr; /**< buffer write pointer */
+	void *r_ptr; /**< buffer read pointer */
 	void *sta_addr;
-	void *end_addr; /* buffer end address */
+	void *end_addr; /**< buffer end address */
 
 };
 
-/* Key phrase buffer component */
+/*! Key phrase buffer component */
 struct comp_data {
 	/* runtime data */
 	uint32_t history_depth; /* history depth in bytes */
 	uint8_t no_of_clients; /* number of registered clients */
-	struct kpb_client clients[MAX_NO_OF_CLIENTS];
+	struct kpb_client clients[KPB_MAX_NO_OF_CLIENTS];
 	struct history_buffer his_buf_lp;
 	struct history_buffer his_buf_hp;
 	void *r_ptr;
+	uint32_t source_period_bytes; /**< source number of period bytes */
+	uint32_t sink_period_bytes; /**< sink number of period bytes */
 
 };
 

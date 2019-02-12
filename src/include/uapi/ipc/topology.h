@@ -67,6 +67,7 @@ enum sof_comp_type {
 	/* keep FILEREAD/FILEWRITE as the last ones */
 	SOF_COMP_FILEREAD,	/**< host test based file IO */
 	SOF_COMP_FILEWRITE,	/**< host test based file IO */
+	SOF_COMP_KPB, /* A key phrase buffer component */
 };
 
 /* XRUN action for component */
