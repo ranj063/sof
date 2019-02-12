@@ -8,4 +8,5 @@ EXTRA_DIST = \
 	pipeline.m4 \
 	src.m4 \
 	tone.m4 \
+	mux.m4 \
 	utils.m4
