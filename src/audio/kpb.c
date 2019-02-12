@@ -463,9 +463,49 @@ static int kpb_begin_drainning(struct comp_dev *dev, uint8_t client_id)
 	return ret;
 }
 
+/**
+ * kpb_register_client() - register clients in the system.
+ *
+ * @arg1:  kpb component.
+ * @arg2:  pointer kpb_client data.
+ *
+ * Return: integer representing either 0 - success
+ * or -EINVAL - failure.
+ */
 static int kpb_register_client(struct comp_dev *dev, struct kpb_client *cli)
 {
-	return 0;
+	int ret;
+	struct comp_data *kpb = comp_get_drvdata(dev);
+
+	trace_kpb("kpb_register_client()");
+
+	if (!cli) {
+		trace_kpb_error("kpb_register_client() error: "
+				"no client data");
+		return -EINVAL;
+	}
+	/* Do we have a room for a new client? */
+	if (kpb->no_of_clients >= MAX_NO_OF_CLIENTS ||
+	    cli->id > MAX_NO_OF_CLIENTS) {
+		trace_kpb_error("kpb_register_client() error: "
+				"no free room for client = %u ",
+				cli->id);
+		ret = -EINVAL;
+	} else if (kpb->clients[cli->id].state != KPB_CLIENT_UNREGISTERED) {
+		trace_kpb_error("kpb_register_client() error: "
+				"client = %u already registered",
+				cli->id);
+		ret = -EINVAL;
+	} else {
+		/* Client accepted, let's store his data */
+		kpb->clients[cli->id].history_depth = cli->history_depth;
+		kpb->clients[cli->id].id  = cli->id;
+		kpb->clients[cli->id].state = KPB_CLIENT_BUFFERING;
+		kpb->no_of_clients++;
+		ret = 0;
+	}
+
+	return ret;
 }
 
 static void kpb_cache(struct comp_dev *dev, int cmd)
