@@ -356,9 +356,111 @@ static int kpb_cmd(struct comp_dev *dev, int cmd, void *data,
 	return ret;
 }
 
+/**
+ * kpb_begin_drainning() - drain internal buffer into client's
+ * sink buffer.
+ *
+ * @arg1:  kpb component.
+ * @arg2:  clients id
+ *
+ * Return: integer representing either 0 - success
+ * or -EINVAL - failure.
+ */
 static int kpb_begin_drainning(struct comp_dev *dev, uint8_t client_id)
 {
-	return 0;
+	int ret = 0;
+	struct comp_data *kpb = comp_get_drvdata(dev);
+	struct comp_buffer *sink;
+	int i = client_id;
+	int history_depth = kpb->clients[client_id].history_depth;
+	struct history_buffer *hb;
+	int buffered_so_far;
+	void *source_r_ptr;
+	int copy_residue;
+	void *sink_w_ptr;
+
+	trace_kpb("kpb_begin_drainning()");
+
+	struct list_item *sink_list = dev->bsink_list.next;
+
+	do {
+		sink = list_item(sink_list->next, struct comp_buffer,
+				 sink_list);
+	} while (--i);
+
+	if (!sink) {
+		trace_kpb_error("kpb_begin_drainning() error: "
+				"requested draining for unregistered client");
+		return -EINVAL;
+	}
+
+#if KPB_NO_OF_HISTORY_BUFFERS == 2
+	/* choose proper buffer to read from */
+	hb = (kpb->his_buf_lp.state == KPB_BUFFER_FREE &&
+	     (kpb->his_buf_lp.w_ptr != kpb->his_buf_lp.sta_addr)) ?
+	     &kpb->his_buf_lp : &kpb->his_buf_hp;
+
+	if (hb->sta_addr == hb->w_ptr)
+		source_r_ptr = hb->end_addr;
+	else
+		source_r_ptr = hb->w_ptr;
+
+	buffered_so_far = (int)source_r_ptr - (int)hb->sta_addr;
+
+	if (buffered_so_far < history_depth) {
+		source_r_ptr = source_r_ptr - buffered_so_far;
+		memcpy(sink->w_ptr, source_r_ptr, buffered_so_far);
+		sink_w_ptr = sink->w_ptr + buffered_so_far;
+		copy_residue = history_depth - buffered_so_far;
+
+		/* change buffer */
+		if (hb->id == KPB_LP)
+			hb = &kpb->his_buf_hp;
+		else
+			hb = &kpb->his_buf_lp;
+
+		source_r_ptr = hb->end_addr - copy_residue;
+		memcpy(sink_w_ptr, source_r_ptr, copy_residue);
+
+	} else {
+		source_r_ptr = source_r_ptr - history_depth;
+		memcpy(sink->w_ptr, source_r_ptr, history_depth);
+	}
+
+	/* update sink data */
+	comp_update_buffer_produce(sink, history_depth);
+
+#elif KPB_NO_OF_HISTORY_BUFFERS == 1
+
+	hb = &kpb->his_buf_hp;
+
+	if (hb->sta_addr == hb->w_ptr)
+		source_r_ptr = hb->end_addr;
+	else
+		source_r_ptr = hb->w_ptr;
+
+	buffered_so_far = (int)source_r_ptr - (int)hb->sta_addr;
+
+	if (buffered_so_far < history_depth) {
+		sink_w_ptr = sink->w_ptr;
+		source_r_ptr = source_r_ptr - buffered_so_far;
+		memcpy(sink_w_ptr, source_r_ptr, buffered_so_far);
+		sink_w_ptr = sink_w_ptr + buffered_so_far;
+		source_r_ptr = hb->end_addr;
+		copy_residue = history_depth - buffered_so_far;
+		memcpy(sink_w_ptr, source_r_ptr, history_depth);
+	} else {
+		sink_w_ptr = sink->w_ptr;
+		memcpy(sink_w_ptr, source_r_ptr, history_depth);
+	}
+
+	comp_update_buffer_produce(sink, history_depth);
+
+#else
+#error "Wrong number of key phrase buffers configured"
+#endif
+
+	return ret;
 }
 
 static int kpb_register_client(struct comp_dev *dev, struct kpb_client *cli)
