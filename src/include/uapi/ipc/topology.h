@@ -69,6 +69,12 @@ enum sof_comp_type {
 	SOF_COMP_FILEWRITE,	/**< host test based file IO */
 };
 
+enum sof_mux_flavour {
+	SOF_COMP_MUX_GENERIC = 0,	/* generic mux */
+	SOF_COMP_MUX_CH_SEL,		/* channel selector */
+	SOF_COMP_MUX_KPB,		/* keyphrase buffer manager */
+};
+
 /* XRUN action for component */
 #define SOF_XRUN_STOP		1	/**< stop stream */
 #define SOF_XRUN_UNDER_ZERO	2	/**< send 0s to sink */
