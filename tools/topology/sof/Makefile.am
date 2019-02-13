@@ -12,4 +12,5 @@ EXTRA_DIST = \
 	pipe-volume-capture.m4 \
 	pipe-volume-playback.m4 \
 	pipe-mux-capture.m4 \
+	pipe-detect.m4 \
 	tokens.m4
