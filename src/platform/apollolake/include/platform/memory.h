@@ -288,6 +288,12 @@
 #define SOF_TEXT_SRC_SIZE 0
 #endif
 
+#if defined(CONFIG_COMP_SEL)
+#define SOF_TEXT_SEL_SIZE 0x1000
+#else
+#define SOF_TEXT_SEL_SIZE 0
+#endif
+
 /* Apollolake HP-SRAM config */
 #if defined(CONFIG_APOLLOLAKE) \
 	&& !(defined(CONFIG_KABYLAKE) || defined(CONFIG_SKYLAKE))
@@ -305,7 +311,8 @@
 #define SOF_TEXT_BASE		(SOF_TEXT_START)
 #define SOF_TEXT_MIN_SIZE	(0x19000 - 0x400)
 #define SOF_TEXT_SIZE		(SOF_TEXT_MIN_SIZE + SOF_TEXT_DMIC_SIZE \
-				+ SOF_TEXT_VOLUME_SIZE + SOF_TEXT_SRC_SIZE)
+				+ SOF_TEXT_VOLUME_SIZE + SOF_TEXT_SRC_SIZE \
+				+ SOF_TEXT_SEL_SIZE)
 
 /* Skylake or kabylake HP-SRAM config */
 #elif defined(CONFIG_KABYLAKE) || defined(CONFIG_SKYLAKE)

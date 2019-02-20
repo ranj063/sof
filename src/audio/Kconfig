@@ -12,10 +12,16 @@ config COMP_SRC
 	help
 	  Select for SRC component
 
-  config COMP_KPB
+config COMP_KPB
 	bool "KPB component"
 	default y
 	help
 	  Select for KPB component
+
+config COMP_SEL
+	bool "Channel selector component"
+	default y
+	help
+	  Select for SRC component
 
 endmenu

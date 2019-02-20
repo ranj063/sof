@@ -263,12 +263,19 @@
 #define SOF_TEXT_SRC_SIZE 0
 #endif
 
+#if defined(CONFIG_COMP_SEL)
+#define SOF_TEXT_SEL_SIZE 0x1000
+#else
+#define SOF_TEXT_SEL_SIZE 0
+#endif
+
 /* text and data share the same HP L2 SRAM on Cannonlake */
 #define SOF_TEXT_START		0xBE040400
 #define SOF_TEXT_BASE		(SOF_TEXT_START)
 #define SOF_TEXT_MIN_SIZE	(0x17000 - 0x400 + 0x2000)
 #define SOF_TEXT_SIZE		(SOF_TEXT_MIN_SIZE + SOF_TEXT_DMIC_SIZE \
-				+ SOF_TEXT_VOLUME_SIZE + SOF_TEXT_SRC_SIZE)
+				+ SOF_TEXT_VOLUME_SIZE + SOF_TEXT_SRC_SIZE \
+				+ SOF_TEXT_SEL_SIZE)
 
 /* initialized data */
 #define SOF_DATA_START		(SOF_TEXT_BASE + SOF_TEXT_SIZE)
