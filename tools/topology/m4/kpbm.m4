@@ -26,8 +26,15 @@ define(`W_KPBM',
 `		SOF_TKN_COMP_FORMAT'	STR($2)
 `	}'
 `}'
+`SectionVendorTuples."'N_KPBM($1)`_process_tuples_str" {'
+`	tokens "sof_process_tokens"'
+`	tuples."string" {'
+`		SOF_TKN_PROCESS_TYPE'	"KPB"
+`	}'
+`}'
 `SectionData."'N_KPBM($1, $5)`_data_str" {'
 `	tuples "'N_KPBM($1, $5)`_tuples_str"'
+`	tuples "'N_KPBM($1)`_process_tuples_str"'
 `}'
 `SectionWidget."'N_KPBM($1, $5)`" {'
 `	index STR($5)'

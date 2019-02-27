@@ -32,8 +32,15 @@ define(`W_SELECTOR',
 `		SOF_TKN_COMP_FORMAT'	STR($2)
 `	}'
 `}'
+`SectionVendorTuples."'N_SELECTOR($1)`_process_tuples_str" {'
+`	tokens "sof_process_tokens"'
+`	tuples."string" {'
+`		SOF_TKN_PROCESS_TYPE'	"SELECTOR"
+`	}'
+`}'
 `SectionData."'N_SELECTOR($1)`_data_str" {'
 `	tuples "'N_SELECTOR($1)`_tuples_str"'
+`	tuples "'N_SELECTOR($1)`_process_tuples_str"'
 `}'
 `SectionWidget."'N_SELECTOR($1)`" {'
 `	index "'PIPELINE_ID`"'

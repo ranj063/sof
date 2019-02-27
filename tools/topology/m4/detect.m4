@@ -20,10 +20,10 @@ define(`W_DETECT',
 `		SOF_TKN_DETECT_ITEM1'	STR($4)
 `	}'
 `}'
-`SectionVendorTuples."'N_DETECT($1)`_detect_effect_tuples_str" {'
-`	tokens "sof_effect_tokens"'
+`SectionVendorTuples."'N_DETECT($1)`_detect_process_tuples_str" {'
+`	tokens "sof_process_tokens"'
 `	tuples."string" {'
-`		SOF_TKN_EFFECT_TYPE'	STR(concat($5, _DETECT))
+`		SOF_TKN_PROCESS_TYPE'	STR(concat($5, _DETECT))
 `	}'
 `}'
 `SectionVendorTuples."'N_DETECT($1)`_detect_pm_tuples_w" {'
@@ -46,7 +46,7 @@ define(`W_DETECT',
 `}'
 `SectionData."'N_DETECT($1)`_data_str" {'
 `	tuples "'N_DETECT($1)`_tuples_str"'
-`	tuples "'N_DETECT($1)`_detect_effect_tuples_str"'
+`	tuples "'N_DETECT($1)`_detect_process_tuples_str"'
 `}'
 `SectionWidget."'N_DETECT($1)`" {'
 `	index "'PIPELINE_ID`"'
