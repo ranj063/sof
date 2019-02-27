@@ -18,14 +18,6 @@ include(`pipeline.m4')
 #
 # Controls
 #
-# Volume Mixer control with max value of 32
-# TODO pass in enum options
-C_CONTROLENUM_TEXT(OUTPUTS, LIST(`		', STR(N_PCMC(PCM_ID)), STR(Other)))
-C_CONTROLENUM(Capture Mux, PIPELINE_ID,
-	CONTROLENUM_OPS(enum, 257 binds the mixer control to enum get/put handlers, 257, 257),
-	LIST(`	', KCONTROL_ENUM_CHANNEL(FL, 0, 0), KCONTROL_ENUM_CHANNEL(FR, 0, 1)),
-	OUTPUTS)
-
 #
 # Components and Buffers
 #
@@ -55,7 +47,6 @@ W_BUFFER(1, COMP_BUFFER_SIZE(2,
 
 P_GRAPH(pipe-kpbm-capture-PIPELINE_ID, PIPELINE_ID,
 	LIST(`		',
-	`dapm(KPBM Capture PCM_ID, N_PCMC(PCM_ID))',
 	`dapm(N_PCMC(PCM_ID), N_BUFFER(1))',
 	`dapm(N_BUFFER(1), N_KPBM(0, PIPELINE_ID))',
 	`dapm(N_KPBM(0, PIPELINE_ID), N_BUFFER(0))'))
@@ -66,7 +57,7 @@ P_GRAPH(pipe-kpbm-capture-PIPELINE_ID, PIPELINE_ID,
 #
 indir(`define', concat(`PIPELINE_SINK_', PIPELINE_ID), N_BUFFER(0))
 indir(`define', concat(`PIPELINE_SOURCE_', PIPELINE_ID), N_KPBM(0, PIPELINE_ID))
-indir(`define', concat(`PIPELINE_PCM_', PIPELINE_ID), Mux Capture PCM_ID)
+indir(`define', concat(`PIPELINE_PCM_', PIPELINE_ID), KPBM Capture PCM_ID)
 
 #
 # PCM Configuration
