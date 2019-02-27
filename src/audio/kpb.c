@@ -40,7 +40,7 @@
 
 static int kpb_register_client(struct comp_dev *dev, struct kpb_client *cli);
 static int kpb_begin_draining(struct comp_dev *dev, uint8_t client_id);
-static void kpb_buffer_data(struct comp_data *kpb, struct comp_buffer *source);
+//static void kpb_buffer_data(struct comp_data *kpb, struct comp_buffer *source);
 
 /**
  * \brief Create a key phrase buffer component.
@@ -110,6 +110,32 @@ static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 	return dev;
 }
 
+/* set component audio stream parameters */
+static int kpb_params(struct comp_dev *dev)
+{
+	struct comp_data *cd;
+	
+	struct sof_ipc_comp_config *config;
+
+	trace_kpb("kp_params()");
+
+	cd = comp_get_drvdata(dev);
+
+	trace_kpb("kp_params() 1");
+	config = COMP_GET_CONFIG(dev);
+
+	trace_kpb("kpb_params(), config->frame_fmt = %u", config->frame_fmt);
+
+	dev->params.frame_fmt = config->frame_fmt;
+
+	dev->frame_bytes = comp_frame_bytes(dev);
+
+	/* calculate period size based on config */
+	cd->period_bytes = dev->frames * dev->frame_bytes;
+
+	return 0;
+}
+
 /**
  * \brief Reclaim memory for a key phrase buffer.
  * \param[in] dev - component device pointer
@@ -143,15 +169,19 @@ static int kpb_trigger(struct comp_dev *dev, int cmd)
  */
 static int kpb_prepare(struct comp_dev *dev)
 {
-	struct comp_data *cd = comp_get_drvdata(dev);
+	//struct comp_data *cd = comp_get_drvdata(dev);
 	int ret = 0;
-	int i;
+	//int i;
 
 	trace_kpb("kpb_prepare()");
 
 	ret = comp_set_state(dev, COMP_TRIGGER_PREPARE);
 	if (ret)
 		return ret;
+
+	return 0;
+
+#if 0
 
 	cd->no_of_clients = 0;
 
@@ -199,6 +229,7 @@ static int kpb_prepare(struct comp_dev *dev)
 		cd->clients[i].state = KPB_CLIENT_UNREGISTERED;
 
 	return ret;
+#endif
 }
 
 /**
@@ -232,27 +263,28 @@ static int kpb_copy(struct comp_dev *dev)
 	if (source && sink) {
 		if (!source->r_ptr || !sink->w_ptr) {
 			return -EINVAL;
-		} else if (sink->free < kpb->sink_period_bytes) {
+		} else if (sink->free < kpb->period_bytes) {
 			trace_kpb_error("kpb_copy() error: "
 				   "sink component buffer"
 				   " has not enough free bytes for copy");
-			comp_overrun(dev, sink, kpb->sink_period_bytes, 0);
+			comp_overrun(dev, sink, kpb->period_bytes, 0);
 			return -EIO; /* xrun */
-		} else if (source->avail < kpb->source_period_bytes) {
+		} else if (source->avail < kpb->period_bytes) {
 			trace_kpb_error("kpb_copy() error: "
 					   "source component buffer"
 					   " has not enough data available");
-			comp_underrun(dev, source, kpb->source_period_bytes,
+			comp_underrun(dev, source, kpb->period_bytes,
 				      0);
 			return -EIO; /* xrun */
 		} else {
 			/* sink and source are both ready and have space */
 			/* TODO: copy sink or source period data here? */
 			memcpy(sink->w_ptr, source->r_ptr,
-			       kpb->sink_period_bytes);
+			       kpb->period_bytes);
 			/* signal update source & sink data */
 			update_buffers = 1;
 		}
+#if 0
 		/* buffer source data internally for future use by clients */
 		if (source->avail <= KPB_MAX_BUFFER_SIZE) {
 			/* TODO: should we copy what is available or just
@@ -260,17 +292,19 @@ static int kpb_copy(struct comp_dev *dev)
 			 */
 			kpb_buffer_data(kpb, source);
 		}
+#endif
 	} else {
 		ret = -EIO;
 	}
 
 	if (update_buffers) {
-		comp_update_buffer_produce(sink, kpb->sink_period_bytes);
-		comp_update_buffer_consume(source, kpb->sink_period_bytes);
+		comp_update_buffer_produce(sink, kpb->period_bytes);
+		comp_update_buffer_consume(source, kpb->period_bytes);
 	}
 	return ret;
 }
 
+#if 0
 /**
  * \brief Buffer real time data stream in
  *	the internal buffer.
@@ -283,7 +317,7 @@ static int kpb_copy(struct comp_dev *dev)
 static void kpb_buffer_data(struct comp_data *kpb, struct comp_buffer *source)
 {
 	trace_kpb("kpb_buffer_data()");
-	int size_to_copy = kpb->source_period_bytes;
+	int size_to_copy = kpb->period_bytes;
 	int space_avail;
 	struct history_buffer *hb;
 
@@ -335,6 +369,7 @@ static void kpb_buffer_data(struct comp_data *kpb, struct comp_buffer *source)
 #endif
 
 }
+#endif
 
 /**
  * \brief Kpb event handler.
@@ -554,12 +589,12 @@ struct comp_driver comp_kpb = {
 		.new = kpb_new,
 		.free = kpb_free,
 		.cmd = kpb_cmd,
+		.params	= kpb_params,
 		.trigger = kpb_trigger,
 		.copy = kpb_copy,
 		.prepare = kpb_prepare,
 		.reset = kpb_reset,
 		.cache = kpb_cache,
-		.params = NULL,
 	},
 };
 

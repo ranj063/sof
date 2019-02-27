@@ -10,6 +10,7 @@ if(NOT BUILD_HOST)
 		mixer.c
 		mux.c
 		detect_test.c
+		kpb.c
 		switch.c
 		dai.c
 		host.c
