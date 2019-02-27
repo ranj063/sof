@@ -50,7 +50,7 @@
 #include "selector.h"
 #include <sof/math/numbers.h>
 
-
+#if 0
 /**
  * \brief Validates channel count and index and sets channel count.
  * \details If input data is not supported trace error is displayed and
@@ -99,6 +99,7 @@ static int sel_set_channel_values(struct comp_data *cd, uint32_t in_channels,
 
 	return 0;
 }
+#endif
 
 /**
  * \brief Creates selector component.
@@ -108,12 +109,13 @@ static int sel_set_channel_values(struct comp_data *cd, uint32_t in_channels,
 static struct comp_dev *selector_new(struct sof_ipc_comp *comp)
 {
 	struct comp_dev *dev;
-	struct sof_ipc_comp_selector *sel;
-	struct sof_ipc_comp_selector *ipc_sel =
-		(struct sof_ipc_comp_selector *)comp;
+	struct sof_ipc_comp_process *sel;
+	struct sof_ipc_comp_process *ipc_sel =
+		(struct sof_ipc_comp_process *)comp;
 	struct comp_data *cd;
+#if 0
 	int ret;
-
+#endif
 	trace_selector("selector_new()");
 
 	if (IPC_IS_SIZE_INVALID(ipc_sel->config)) {
@@ -122,12 +124,12 @@ static struct comp_dev *selector_new(struct sof_ipc_comp *comp)
 	}
 
 	dev = rzalloc(RZONE_RUNTIME, SOF_MEM_CAPS_RAM,
-		      COMP_SIZE(struct sof_ipc_comp_selector));
+		      COMP_SIZE(struct sof_ipc_comp_process));
 	if (!dev)
 		return NULL;
 
-	sel = (struct sof_ipc_comp_selector *)&dev->comp;
-	memcpy(sel, ipc_sel, sizeof(struct sof_ipc_comp_selector));
+	sel = (struct sof_ipc_comp_process *)&dev->comp;
+	memcpy(sel, ipc_sel, sizeof(struct sof_ipc_comp_process));
 
 	cd = rzalloc(RZONE_RUNTIME, SOF_MEM_CAPS_RAM, sizeof(*cd));
 	if (!cd) {
@@ -137,6 +139,7 @@ static struct comp_dev *selector_new(struct sof_ipc_comp *comp)
 
 	comp_set_drvdata(dev, cd);
 
+#if 0
 	/* verification of initial parameters */
 	ret = sel_set_channel_values(cd, ipc_sel->input_channels_count,
 				     ipc_sel->output_channels_count,
@@ -146,7 +149,7 @@ static struct comp_dev *selector_new(struct sof_ipc_comp *comp)
 		rfree(dev);
 		return NULL;
 	}
-
+#endif
 	dev->state = COMP_STATE_READY;
 	return dev;
 }
