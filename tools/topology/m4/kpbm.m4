@@ -31,7 +31,7 @@ define(`W_KPBM',
 `}'
 `SectionWidget."'N_KPBM($1, $5)`" {'
 `	index STR($5)'
-`	type "mux"'
+`	type "effect"'
 `	no_pm "true"'
 `	data ['
 `		"'N_KPBM($1, $5)`_data_w"'

@@ -51,8 +51,9 @@ static void kpb_buffer_data(struct comp_data *kpb, struct comp_buffer *source);
 static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 {
 	struct comp_dev *dev;
-	struct sof_ipc_comp_kpb *kpb;
-	struct sof_ipc_comp_kpb *ipc_kpb = (struct sof_ipc_comp_kpb *)comp;
+	struct sof_ipc_comp_process *kpb;
+	struct sof_ipc_comp_process *ipc_kpb =
+		(struct sof_ipc_comp_process *)comp;
 	struct comp_data *cd;
 
 	trace_kpb("kpb_new()");
@@ -61,7 +62,7 @@ static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 		IPC_SIZE_ERROR_TRACE(TRACE_CLASS_KPB, ipc_kpb->config);
 		return NULL;
 	}
-
+#if 0
 	/* Validate input parameters */
 	if (ipc_kpb->channels > KPB_MAX_SUPPORTED_CHANNELS) {
 		trace_kpb_error("kpb_new() error: "
@@ -86,21 +87,23 @@ static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 		"requested sampling width not supported");
 		return NULL;
 	}
-
+#endif
 	dev = rzalloc(RZONE_RUNTIME, SOF_MEM_CAPS_RAM,
-		COMP_SIZE(struct sof_ipc_comp_kpb));
+		COMP_SIZE(struct sof_ipc_comp_process));
 	if (!dev)
 		return NULL;
 
-	kpb = (struct sof_ipc_comp_kpb *)&dev->comp;
-	memcpy(kpb, ipc_kpb, sizeof(struct sof_ipc_comp_kpb));
+	kpb = (struct sof_ipc_comp_process *)&dev->comp;
+	memcpy(kpb, ipc_kpb, sizeof(struct sof_ipc_comp_process));
 
 	cd = rzalloc(RZONE_RUNTIME, SOF_MEM_CAPS_RAM, sizeof(*cd));
 	if (!cd) {
 		rfree(dev);
 		return NULL;
 	}
+#if 0
 	cd->history_depth = ipc_kpb->history_depth;
+#endif
 	comp_set_drvdata(dev, cd);
 	dev->state = COMP_STATE_READY;
 

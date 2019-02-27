@@ -220,6 +220,7 @@ enum sof_ipc_effect_type {
 	SOF_PROCESS_EQIIR,		/**< IIR */
 	SOF_PROCESS_KEYWORD_DETECT,     /**< Keyword Detection */
 	SOF_PROCESS_VOICE_DETECT,       /**< Voice Detection */
+	SOF_PROCESS_KPB,     /**< KeyPhrase Buffer Manager */
 };
 
 /* generic "effect", "codec" or proprietary processing component */
