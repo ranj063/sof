@@ -177,16 +177,18 @@ static void selector_free(struct comp_dev *dev)
  */
 static int selector_params(struct comp_dev *dev)
 {
-	struct comp_data *cd = comp_get_drvdata(dev);
+	//struct comp_data *cd = comp_get_drvdata(dev);
 
 	trace_selector("selector_params()");
 
+	/* FIXME: do we need this? prepare() gets the input/output channel counts from source/sink comp params */
+#if 0
 	/* rewrite channels number for other components */
 	if (dev->params.direction == SOF_IPC_STREAM_PLAYBACK)
 		dev->params.channels = cd->out_channels_count;
 	else
 		dev->params.channels = cd->in_channels_count;
-
+#endif
 	return 0;
 }
 
