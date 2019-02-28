@@ -94,6 +94,18 @@ static void keyword_free(struct comp_dev *dev)
 static int keyword_params(struct comp_dev *dev)
 {
 
+	struct comp_data *cd = comp_get_drvdata(dev);;
+	struct sof_ipc_comp_config *config = COMP_GET_CONFIG(dev);
+
+	trace_keyword("kpb_params()");
+
+	dev->params.frame_fmt = config->frame_fmt;
+
+	dev->frame_bytes = comp_frame_bytes(dev);
+
+	/* calculate period size based on config */
+	cd->period_bytes = dev->frames * dev->frame_bytes;
+
 	return 0;
 }
 
@@ -107,6 +119,8 @@ static int keyword_ctrl_set_cmd(struct comp_dev *dev,
 			       struct sof_ipc_ctrl_data *cdata)
 {
 	struct comp_data *cd = comp_get_drvdata(dev);
+	struct comp_buffer *bsource1, *bsource2;
+	struct comp_dev *kpb_dev;
 	int j;
 
 	/* validate */
@@ -124,6 +138,27 @@ static int keyword_ctrl_set_cmd(struct comp_dev *dev,
 		/* save switch state */
 		for (j = 0; j < cdata->num_elems; j++)
 			cd->switch_state[j] = cdata->chanv[j].value;
+
+		/*
+		 * get a handle to the KPB comp_dev.
+		 * a bit of a hack with the assumption that the detect->ch_sel->kpb.
+		 * FIXME: use notification or something smarter
+		 */
+		bsource1 = list_first_item(&dev->bsource_list, struct comp_buffer,
+					  sink_list);
+
+		bsource2 = list_first_item(&bsource1->source->bsource_list, struct comp_buffer,
+					   sink_list);
+
+		if (bsource1->source->comp.type == SOF_COMP_KPB) {
+			trace_keyword("found kpb dev");
+			kpb_dev = bsource2->source;
+
+			/* send a command to kpb */
+			comp_cmd(kpb_dev, COMP_CMD_SET_VALUE, &cd->switch_state[0], 100);
+		} else {
+			return -EINVAL;
+		}
 
 		break;
 
@@ -191,6 +226,15 @@ static int keyword_cmd(struct comp_dev *dev, int cmd, void *data,
 /* copy and process stream data from source to sink buffers */
 static int keyword_copy(struct comp_dev *dev)
 {
+	struct comp_data *cd = comp_get_drvdata(dev);
+	struct comp_buffer *source;
+
+	/* Detect only has one source buffer and no sinks */
+	source = list_first_item(&dev->bsource_list, struct comp_buffer,
+				 sink_list);
+
+	/* consume the buffer */
+	comp_update_buffer_consume(source, cd->period_bytes);
 
 	return 0;
 }
