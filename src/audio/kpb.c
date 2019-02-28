@@ -104,6 +104,10 @@ static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 #if 0
 	cd->history_depth = ipc_kpb->history_depth;
 #endif
+
+	/* by default KPB will copy buffers to the host comp */
+	cd->sink_type = SOF_COMP_HOST;
+
 	comp_set_drvdata(dev, cd);
 	dev->state = COMP_STATE_READY;
 
@@ -113,16 +117,8 @@ static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 /* set component audio stream parameters */
 static int kpb_params(struct comp_dev *dev)
 {
-	struct comp_data *cd;
-	
-	struct sof_ipc_comp_config *config;
-
-	trace_kpb("kp_params()");
-
-	cd = comp_get_drvdata(dev);
-
-	trace_kpb("kp_params() 1");
-	config = COMP_GET_CONFIG(dev);
+	struct comp_data *cd = comp_get_drvdata(dev);;
+	struct sof_ipc_comp_config *config = COMP_GET_CONFIG(dev);
 
 	trace_kpb("kpb_params(), config->frame_fmt = %u", config->frame_fmt);
 
@@ -132,6 +128,8 @@ static int kpb_params(struct comp_dev *dev)
 
 	/* calculate period size based on config */
 	cd->period_bytes = dev->frames * dev->frame_bytes;
+
+	trace_kpb("kpb_params(), period_bytes = %d frames %d", cd->period_bytes, dev->frames);
 
 	return 0;
 }
@@ -250,40 +248,61 @@ static int kpb_copy(struct comp_dev *dev)
 	struct comp_data *kpb = comp_get_drvdata(dev);
 	struct comp_buffer *source;
 	struct comp_buffer *sink;
+	struct list_item *clist;
 
 	tracev_kpb("kpb_copy()");
 
-	/* get source and sink buffers */
+	/* KPB only ever has one source buffer */
 	source = list_first_item(&dev->bsource_list, struct comp_buffer,
 				 sink_list);
-	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
-			       source_list);
+
+	/* get the host sink buffer */
+        list_for_item(clist, &dev->bsink_list) {
+		struct comp_buffer *buffer;
+
+                buffer = container_of(clist, struct comp_buffer, source_list);
+
+		if (buffer->sink->comp.type == kpb->sink_type) {
+			sink = buffer;
+			goto found;
+		}
+	}
+
+	trace_kpb_error("kpb_copy() error: cannot find host sink buffer");
+	return -EINVAL;
+
+found:
 	/* process source data */
 	/* check if there are valid pointers */
 	if (source && sink) {
-		if (!source->r_ptr || !sink->w_ptr) {
+		if (!source->r_ptr || !sink->w_ptr)
 			return -EINVAL;
-		} else if (sink->free < kpb->period_bytes) {
+
+		if (sink->free < kpb->period_bytes) {
+			trace_kpb("sink free bytes %d", sink->free);
 			trace_kpb_error("kpb_copy() error: "
 				   "sink component buffer"
 				   " has not enough free bytes for copy");
 			comp_overrun(dev, sink, kpb->period_bytes, 0);
 			return -EIO; /* xrun */
-		} else if (source->avail < kpb->period_bytes) {
+		} 
+
+		if (source->avail < kpb->period_bytes) {
 			trace_kpb_error("kpb_copy() error: "
 					   "source component buffer"
 					   " has not enough data available");
 			comp_underrun(dev, source, kpb->period_bytes,
 				      0);
 			return -EIO; /* xrun */
-		} else {
-			/* sink and source are both ready and have space */
-			/* TODO: copy sink or source period data here? */
-			memcpy(sink->w_ptr, source->r_ptr,
-			       kpb->period_bytes);
-			/* signal update source & sink data */
-			update_buffers = 1;
 		}
+
+		/* sink and source are both ready and have space */
+		/* TODO: copy sink or source period data here? */
+		memcpy(sink->w_ptr, source->r_ptr,
+		       kpb->period_bytes);
+		/* signal update source & sink data */
+		update_buffers = 1;
+
 #if 0
 		/* buffer source data internally for future use by clients */
 		if (source->avail <= KPB_MAX_BUFFER_SIZE) {
@@ -386,14 +405,29 @@ static void kpb_buffer_data(struct comp_data *kpb, struct comp_buffer *source)
 static int kpb_cmd(struct comp_dev *dev, int cmd, void *data,
 		   int max_data_size)
 {
-	int ret = 0;
-	struct sof_ipc_ctrl_data *cdata = data;
+	//struct sof_ipc_ctrl_data *cdata = data;
+	struct comp_data *kpb = comp_get_drvdata(dev);
+#if 0
 	struct kpb_client *cli = (struct kpb_client *)cdata->data->data;
 	uint8_t client_id = cli->id;
+#endif
+	struct kpb_client *cli = NULL;
+	uint8_t client_id = 0;
+	int ret = 0;
+	uint32_t *cmd_data;
 
 	trace_kpb("kpb_cmd()");
 
+
 	switch (cmd) {
+	case COMP_CMD_SET_VALUE:
+		trace_kpb("kpb set value command");
+		cmd_data = (uint32_t *)data;
+		if (*cmd_data)
+			kpb->sink_type = SOF_COMP_SELECTOR;
+		else
+			kpb->sink_type = SOF_COMP_HOST;
+		break;
 	case KPB_EVENT_REGISTER_CLIENT:
 		ret = kpb_register_client(dev, cli);
 		break;
@@ -415,7 +449,7 @@ static int kpb_cmd(struct comp_dev *dev, int cmd, void *data,
 		break;
 	}
 
-	return ret;
+	return 0;
 }
 
 /**

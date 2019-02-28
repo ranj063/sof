@@ -120,7 +120,7 @@ struct comp_data {
 	struct history_buffer his_buf_hp;
 	void *r_ptr;
 	uint32_t period_bytes; /**< sink number of period bytes */
-
+	enum sof_comp_type sink_type;
 };
 
 #endif
