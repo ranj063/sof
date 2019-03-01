@@ -54,6 +54,15 @@ SectionGraph."pipe-sof-apl-keyword-detect" {
                 dapm(PIPELINE_SINK_2, PIPELINE_SOURCE_1)
         ]
 }
+# Connect pipelines together
+SectionGraph."pipe-sof-apl-keyword-detect" {
+        index "2"
+
+        lines [
+		# keyword detect
+		dapm(PIPELINE_PCM_1, PIPELINE_DETECT_2)
+        ]
+}
 
 #
 # DAIs configuration
