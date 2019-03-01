@@ -52,6 +52,8 @@ define(`W_DETECT',
 `	index "'PIPELINE_ID`"'
 `	type "effect"'
 `	no_pm "true"'
+`	event_flags	"15"'
+`	event_type	"1"'
 `	data ['
 `		"'N_DETECT($1)`_data_w"'
 `		"'N_DETECT($1)`_data_str"'
