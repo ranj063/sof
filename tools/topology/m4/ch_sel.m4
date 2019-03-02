@@ -14,17 +14,8 @@ define(`W_SELECTOR',
 `		SOF_TKN_COMP_PERIOD_SOURCE_COUNT'	STR($4)
 `	}'
 `}'
-`SectionVendorTuples."'N_SELECTOR($1)`_chan_tuples_w" {'
-`	tokens "sof_ch_sel_tokens"'
-`	tuples."word" {'
-`		SOF_TKN_CS_IN_CNT'	STR($5)
-`		SOF_TKN_CS_OUT_CNT'	STR($6)
-`		SOF_TKN_CS_OUT_CH_INDEX'	STR($7)
-`	}'
-`}'
 `SectionData."'N_SELECTOR($1)`_data_w" {'
 `	tuples "'N_SELECTOR($1)`_tuples_w"'
-`	tuples "'N_SELECTOR($1)`_chan_tuples_w"'
 `}'
 `SectionVendorTuples."'N_SELECTOR($1)`_tuples_str" {'
 `	tokens "sof_comp_tokens"'
