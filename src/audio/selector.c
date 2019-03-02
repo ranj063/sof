@@ -177,18 +177,31 @@ static void selector_free(struct comp_dev *dev)
  */
 static int selector_params(struct comp_dev *dev)
 {
-	//struct comp_data *cd = comp_get_drvdata(dev);
+	struct comp_data *cd = comp_get_drvdata(dev);
+	struct comp_buffer *sourceb, *sinkb;
+	struct comp_dev *source, *sink;
 
 	trace_selector("selector_params()");
 
-	/* FIXME: do we need this? prepare() gets the input/output channel counts from source/sink comp params */
-#if 0
+	/* selector component will have 1 source and 1 sink buffer */
+	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+				  sink_list);
+	source = sourceb->source;
+
+	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+				source_list);
+	sink = sinkb->sink;
+
+	/* set input/output channel counts based on source/sink params */
+	cd->out_channels_count = sink->params.channels;
+	cd->in_channels_count = source->params.channels;
+
 	/* rewrite channels number for other components */
 	if (dev->params.direction == SOF_IPC_STREAM_PLAYBACK)
 		dev->params.channels = cd->out_channels_count;
 	else
 		dev->params.channels = cd->in_channels_count;
-#endif
+
 	return 0;
 }
 
@@ -364,15 +377,6 @@ static int selector_prepare(struct comp_dev *dev)
 	trace_selector("selector_prepare(): sink->params.channels = %u",
 		       sinkb->sink->params.channels);
 
-	/* set downstream buffer size */
-	ret = buffer_set_size(sinkb, cd->sink_period_bytes *
-			      config->periods_sink);
-	if (ret < 0) {
-		trace_selector_error("selector_prepare() error: "
-				     "buffer_set_size() failed");
-		goto err;
-	}
-
 	/* validate */
 	if (cd->sink_period_bytes == 0) {
 		trace_selector_error("selector_prepare() error: "
@@ -391,6 +395,15 @@ static int selector_prepare(struct comp_dev *dev)
 				     dev->frames,
 				     sourceb->source->frame_bytes);
 		ret = -EINVAL;
+		goto err;
+	}
+
+	/* set downstream buffer size */
+	ret = buffer_set_size(sinkb, cd->sink_period_bytes *
+			      config->periods_sink);
+	if (ret < 0) {
+		trace_selector_error("selector_prepare() error: "
+				     "buffer_set_size() failed");
 		goto err;
 	}
 
