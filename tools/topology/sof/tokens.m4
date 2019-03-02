@@ -88,6 +88,7 @@ SectionVendorTokens."sof_tone_tokens" {
 
 SectionVendorTokens."sof_process_tokens" {
 	SOF_TKN_PROCESS_TYPE			"900"
+	SOF_TKN_PROCESS_SUBTYPE			"901"
 }
 
 SectionVendorTokens."sof_pm_tokens" {
