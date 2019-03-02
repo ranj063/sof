@@ -268,7 +268,8 @@ static int kpb_copy(struct comp_dev *dev)
 		}
 	}
 
-	trace_kpb_error("kpb_copy() error: cannot find host sink buffer");
+	trace_kpb_error("kpb_copy() error: cannot find sink buffer with type %u",
+			kpb->sink_type);
 	return -EINVAL;
 
 found:
@@ -279,7 +280,6 @@ found:
 			return -EINVAL;
 
 		if (sink->free < kpb->period_bytes) {
-			trace_kpb("sink free bytes %d", sink->free);
 			trace_kpb_error("kpb_copy() error: "
 				   "sink component buffer"
 				   " has not enough free bytes for copy");
@@ -320,6 +320,11 @@ found:
 		comp_update_buffer_produce(sink, kpb->period_bytes);
 		comp_update_buffer_consume(source, kpb->period_bytes);
 	}
+
+	/* schedule copy for the detect pipeline if it is enabled */
+	if (kpb->sink_type == SOF_COMP_SELECTOR)
+		pipeline_schedule_copy(sink->sink->pipeline, 0);
+
 	return ret;
 }
 
@@ -613,8 +618,9 @@ static void kpb_cache(struct comp_dev *dev, int cmd)
 
 static int kpb_reset(struct comp_dev *dev)
 {
-	/* TODO: what data of KPB should we reset here? */
-	return 0;
+	trace_kpb("kpb_reset()");
+
+	return comp_set_state(dev, COMP_TRIGGER_RESET);
 }
 
 struct comp_driver comp_kpb = {
