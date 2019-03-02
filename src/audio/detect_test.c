@@ -94,12 +94,15 @@ static void keyword_free(struct comp_dev *dev)
 static int keyword_params(struct comp_dev *dev)
 {
 
-	struct comp_data *cd = comp_get_drvdata(dev);;
+	struct comp_data *cd = comp_get_drvdata(dev);
 	struct sof_ipc_comp_config *config = COMP_GET_CONFIG(dev);
 
-	trace_keyword("kpb_params()");
+	trace_keyword("keyword_params()");
 
 	dev->params.frame_fmt = config->frame_fmt;
+
+	/* detect comp uses mono */
+	dev->params.channels = 1;
 
 	dev->frame_bytes = comp_frame_bytes(dev);
 
@@ -150,7 +153,7 @@ static int keyword_ctrl_set_cmd(struct comp_dev *dev,
 		bsource2 = list_first_item(&bsource1->source->bsource_list, struct comp_buffer,
 					   sink_list);
 
-		if (bsource1->source->comp.type == SOF_COMP_KPB) {
+		if (bsource2->source->comp.type == SOF_COMP_KPB) {
 			trace_keyword("found kpb dev");
 			kpb_dev = bsource2->source;
 
@@ -229,6 +232,8 @@ static int keyword_copy(struct comp_dev *dev)
 	struct comp_data *cd = comp_get_drvdata(dev);
 	struct comp_buffer *source;
 
+	tracev_keyword("keyword_copy()");
+
 	/* Detect only has one source buffer and no sinks */
 	source = list_first_item(&dev->bsource_list, struct comp_buffer,
 				 sink_list);
@@ -239,14 +244,29 @@ static int keyword_copy(struct comp_dev *dev)
 	return 0;
 }
 
+/**
+ * \brief Sets component state.
+ * \param[in,out] dev keyword base component device.
+ * \param[in] cmd Command type.
+ * \return Error code.
+ */
+static int keyword_trigger(struct comp_dev *dev, int cmd)
+{
+	trace_keyword("keyword_trigger()");
+
+	return comp_set_state(dev, cmd);
+}
+
 static int keyword_reset(struct comp_dev *dev)
 {
-	return 0;
+	trace_keyword("keyword_reset()");
+
+	return comp_set_state(dev, COMP_TRIGGER_RESET);
 }
 
 static int keyword_prepare(struct comp_dev *dev)
 {
-	return 0;
+	return comp_set_state(dev, COMP_TRIGGER_PREPARE);
 }
 
 struct comp_driver comp_keyword = {
@@ -257,6 +277,7 @@ struct comp_driver comp_keyword = {
 		.params		= keyword_params,
 		.cmd		= keyword_cmd,
 		.copy		= keyword_copy,
+		.trigger	= keyword_trigger,
 		.prepare	= keyword_prepare,
 		.reset		= keyword_reset,
 	},
