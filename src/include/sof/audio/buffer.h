@@ -72,6 +72,8 @@ struct comp_buffer {
 	struct list_item source_list;	/* list in comp buffers */
 	struct list_item sink_list;	/* list in comp buffers */
 
+	uint16_t state;			/* buffer state */
+
 	spinlock_t lock; /* component buffer spinlock */
 };
 

@@ -87,6 +87,7 @@ struct comp_buffer *buffer_new(struct sof_ipc_buffer *desc)
 	buffer->end_addr = buffer->addr + buffer->ipc_buffer.size;
 	buffer->free = buffer->ipc_buffer.size;
 	buffer->avail = 0;
+	buffer->state = COMP_STATE_ACTIVE;
 
 	buffer_zero(buffer);
 

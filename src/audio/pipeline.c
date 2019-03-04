@@ -125,6 +125,10 @@ static int pipeline_for_each_comp(struct comp_dev *current,
 		if (buff_func)
 			buff_func(buffer);
 
+		/* don't go further if buffer is not active */
+		if (buffer->state != COMP_STATE_ACTIVE)
+			continue;
+
 		buffer_comp = buffer_get_comp(buffer, dir);
 
 		/* don't go further if this component is not connected */
