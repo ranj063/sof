@@ -117,8 +117,14 @@ static struct comp_dev *kpb_new(struct sof_ipc_comp *comp)
 /* set component audio stream parameters */
 static int kpb_params(struct comp_dev *dev)
 {
-	struct comp_data *cd = comp_get_drvdata(dev);;
+	struct comp_data *cd = comp_get_drvdata(dev);
 	struct sof_ipc_comp_config *config = COMP_GET_CONFIG(dev);
+
+	/* check if already configured */
+	if (dev->state == COMP_STATE_PREPARE) {
+		trace_kpb("kpb_params(): component already configured");
+		return 0;
+	}
 
 	trace_kpb("kpb_params(), config->frame_fmt = %u", config->frame_fmt);
 
@@ -256,20 +262,22 @@ static int kpb_copy(struct comp_dev *dev)
 	source = list_first_item(&dev->bsource_list, struct comp_buffer,
 				 sink_list);
 
-	/* get the host sink buffer */
+	/*
+	 * get the sink buffer that is active.
+	 * The assumption is that only one sink buffer will be active.
+	 */
         list_for_item(clist, &dev->bsink_list) {
 		struct comp_buffer *buffer;
 
                 buffer = container_of(clist, struct comp_buffer, source_list);
 
-		if (buffer->sink->comp.type == kpb->sink_type) {
+		if (buffer->state == COMP_STATE_ACTIVE) {
 			sink = buffer;
 			goto found;
 		}
 	}
 
-	trace_kpb_error("kpb_copy() error: cannot find sink buffer with type %u",
-			kpb->sink_type);
+	trace_kpb_error("kpb_copy() error: cannot find active buffer to copy to");
 	return -EINVAL;
 
 found:
@@ -411,7 +419,7 @@ static int kpb_cmd(struct comp_dev *dev, int cmd, void *data,
 		   int max_data_size)
 {
 	//struct sof_ipc_ctrl_data *cdata = data;
-	struct comp_data *kpb = comp_get_drvdata(dev);
+	struct list_item *clist;
 #if 0
 	struct kpb_client *cli = (struct kpb_client *)cdata->data->data;
 	uint8_t client_id = cli->id;
@@ -428,10 +436,31 @@ static int kpb_cmd(struct comp_dev *dev, int cmd, void *data,
 	case COMP_CMD_SET_VALUE:
 		trace_kpb("kpb set value command");
 		cmd_data = (uint32_t *)data;
-		if (*cmd_data)
-			kpb->sink_type = SOF_COMP_SELECTOR;
-		else
-			kpb->sink_type = SOF_COMP_HOST;
+		if (*cmd_data) {
+			/* activate selector buffer and de-activate host buffer */
+			list_for_item(clist, &dev->bsink_list) {
+				struct comp_buffer *buffer;
+
+				buffer = container_of(clist, struct comp_buffer, source_list);
+
+				if (buffer->sink->comp.type == SOF_COMP_SELECTOR)
+					buffer->state = COMP_STATE_ACTIVE;
+				else
+					buffer->state = COMP_STATE_READY;
+			}
+		} else {
+			/* activate host buffer and de-activate selectore buffer */
+			list_for_item(clist, &dev->bsink_list) {
+				struct comp_buffer *buffer;
+
+				buffer = container_of(clist, struct comp_buffer, source_list);
+
+				if (buffer->sink->comp.type == SOF_COMP_SELECTOR)
+					buffer->state = COMP_STATE_READY;
+				else
+					buffer->state = COMP_STATE_ACTIVE;
+			}
+		}
 		break;
 	case KPB_EVENT_REGISTER_CLIENT:
 		ret = kpb_register_client(dev, cli);
