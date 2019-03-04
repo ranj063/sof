@@ -49,6 +49,8 @@
 #include <sof/idc.h>
 #include <platform/idc.h>
 
+static int pipeline_comp_copy(struct comp_dev *current, void *data, int dir);
+
 /* generic pipeline data used by pipeline_comp_* functions */
 struct pipeline_data {
 	struct comp_dev *start;
@@ -125,8 +127,8 @@ static int pipeline_for_each_comp(struct comp_dev *current,
 		if (buff_func)
 			buff_func(buffer);
 
-		/* don't go further if buffer is not active */
-		if (buffer->state != COMP_STATE_ACTIVE)
+		/* don't go further if buffer is not active in case of copy */
+		if (func == &pipeline_comp_copy && buffer->state != COMP_STATE_ACTIVE)
 			continue;
 
 		buffer_comp = buffer_get_comp(buffer, dir);
