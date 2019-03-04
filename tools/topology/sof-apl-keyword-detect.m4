@@ -31,38 +31,11 @@ dnl PIPELINE_PCM_ADD(pipeline,
 dnl     pipe id, pcm, max channels, format,
 dnl     frames, deadline, priority, core)
 
-
 # Passthrough capture pipeline 1 on PCM 0 using max 2 channels.
 # Schedule 16 frames per 1000us deadline on core 0 with priority 0
 PIPELINE_PCM_ADD(sof/pipe-kfbm-capture.m4,
 	1, 0, 2, s32le,
 	16, 1000, 0, 0)
-
-
-# keyword detector pipe
-dnl PIPELINE_ADD(pipeline,
-dnl     pipe id, max channels, format,
-dnl     frames, deadline, priority, core)
-PIPELINE_ADD(sof/pipe-detect.m4, 2, 2, s16le, 16, 1000, 0, 0)
-
-# Connect pipelines together
-SectionGraph."pipe-sof-apl-keyword-detect" {
-        index "0"
-
-        lines [
-		# keyword detect
-                dapm(PIPELINE_SINK_2, PIPELINE_SOURCE_1)
-        ]
-}
-# Connect pipelines together
-SectionGraph."pipe-sof-apl-keyword-detect" {
-        index "2"
-
-        lines [
-		# keyword detect
-		dapm(PIPELINE_PCM_1, PIPELINE_DETECT_2)
-        ]
-}
 
 #
 # DAIs configuration
@@ -83,6 +56,31 @@ DAI_ADD(sof/pipe-dai-capture.m4,
 
 dnl PCM_CAPTURE_ADD(name, pipeline, capture)
 PCM_CAPTURE_ADD(DMIC01, 1, PIPELINE_PCM_1)
+
+# keyword detector pipe
+dnl PIPELINE_ADD(pipeline,
+dnl     pipe id, max channels, format,
+dnl     frames, deadline, priority, core)
+PIPELINE_ADD(sof/pipe-detect.m4, 2, 2, s16le, 16, 1000, 0, 0, PIPELINE_SCHED_COMP_1)
+
+# Connect pipelines together
+SectionGraph."pipe-sof-apl-keyword-detect" {
+        index "0"
+
+        lines [
+		# keyword detect
+                dapm(PIPELINE_SINK_2, PIPELINE_SOURCE_1)
+        ]
+}
+# Connect pipelines together
+SectionGraph."pipe-sof-apl-keyword-detect" {
+        index "2"
+
+        lines [
+		# keyword detect
+		dapm(PIPELINE_PCM_1, PIPELINE_DETECT_2)
+        ]
+}
 
 #
 # BE configurations - overrides config in ACPI if present
