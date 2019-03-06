@@ -26,7 +26,7 @@ define(`W_SELECTOR',
 `SectionVendorTuples."'N_SELECTOR($1)`_process_tuples_str" {'
 `	tokens "sof_process_tokens"'
 `	tuples."string" {'
-`		SOF_TKN_PROCESS_TYPE'	"SELECTOR"
+`		SOF_TKN_PROCESS_TYPE'	"CHAN_SELECTOR"
 `	}'
 `}'
 `SectionData."'N_SELECTOR($1)`_data_str" {'
