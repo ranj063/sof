@@ -99,7 +99,7 @@ struct fuzz_platform {
 	/* all ops mandatory */
 	int (*send_msg)(struct fuzz *f, struct ipc_msg *msg);
 	int (*get_reply)(struct fuzz *f, struct ipc_msg *msg);
-	int (*init)(struct fuzz *f, const struct fuzz_platform *platform);
+	int (*init)(struct fuzz *f, struct fuzz_platform *platform);
 	void (*free)(struct fuzz *f);
 
 	/* registers */
@@ -127,11 +127,11 @@ void fuzzer_ipc_msg_reply(struct fuzz *fuzzer);
 void fuzzer_ipc_crash(struct fuzz *fuzzer, unsigned offset);
 
 /* called by platforms to allocate memory/register regions */
-int fuzzer_create_memory_region(struct fuzz *fuzzer, int idx);
-int fuzzer_create_io_region(struct fuzz *fuzzer, int idx);
+void *fuzzer_create_memory_region(struct fuzz *fuzzer, int idx);
+void *fuzzer_create_io_region(struct fuzz *fuzzer, int idx);
 void fuzzer_free_regions(struct fuzz *fuzzer);
 
-extern const struct fuzz_platform byt_platform;
-extern const struct fuzz_platform cht_platform;
+extern struct fuzz_platform byt_platform;
+extern struct fuzz_platform cht_platform;
 
 #endif

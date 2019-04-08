@@ -32,12 +32,15 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <errno.h>
+#include <unistd.h>
+#include <string.h>
 #include "fuzzer.h"
+#include "qemu-bridge.h"
 
 #include <uapi/ipc/trace.h>
 
 /* list of supported target platforms */
-static const struct fuzz_platform *platform[] =
+static struct fuzz_platform *platform[] =
 {
 		&byt_platform,
 		&cht_platform,
@@ -88,7 +91,7 @@ void *fuzzer_create_io_region(struct fuzz *fuzzer, int idx)
 	return ptr;
 }
 
-int fuzzer_create_memory_region(struct fuzz *fuzzer, int idx)
+void *fuzzer_create_memory_region(struct fuzz *fuzzer, int idx)
 {
 	struct fuzz_platform *plat = fuzzer->platform;
 	struct fuzzer_mem_desc *desc;
@@ -97,12 +100,11 @@ int fuzzer_create_memory_region(struct fuzz *fuzzer, int idx)
 	void *ptr = NULL;
 
 	desc = &plat->mem_region[idx];
-	idx++;
 
 	/* shared via SHM (not shared on real HW) */
 	sprintf(shm_name, "%s-mem", desc->name);
 	err = qemu_io_register_shm(shm_name, idx,
-		desc->size, &desc->ptr);
+		desc->size, &ptr);
 	if (err < 0)
 		fprintf(stderr, "error: can't allocate %s:%d SHM %d\n", shm_name,
 				idx, err);
@@ -208,14 +210,14 @@ int main(int argc, char *argv[])
 
 	/* initialise emulated target device */
 	if (!platform_name) {
-		fpintf(stderr, "error: no target platform specified\n");
+		fprintf(stderr, "error: no target platform specified\n");
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
 	/* find platform */
 	for (i = 0; i < ARRAY_SIZE(platform); i++) {
-		if (!strcmp(platform[i].name, platform_name))
+		if (!strcmp(platform[i]->name, platform_name))
 			goto found;
 	}
 
@@ -225,9 +227,6 @@ int main(int argc, char *argv[])
 	exit(EXIT_FAILURE);
 
 found:
-	/* create SHM regions for platform */
-	regions = create_io_devices(&fuzzer)
-
 	ret = platform[i]->init(&fuzzer, platform[i]);
 	if (ret < 0) {
 		fprintf(stderr, "error: platform %s failed to initialise\n",
@@ -247,6 +246,6 @@ found:
 	/* TODO fuzz IPC */
 
 	/* all done - now free platform */
-	platform[i]->free(fuzzer);
+	platform[i]->free(&fuzzer);
 	return 0;
 }

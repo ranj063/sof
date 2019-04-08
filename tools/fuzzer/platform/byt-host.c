@@ -24,7 +24,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
+#include <stdint.h>
 #include "shim.h"
+#include <uapi/ipc/trace.h>
 #include "../fuzzer.h"
 #include "../qemu-bridge.h"
 
@@ -53,6 +56,9 @@
 #define ADSP_BYT_DRAM_SIZE          0x28000
 #define ADSP_BYT_SHIM_SIZE          0x1000
 #define ADSP_MAILBOX_SIZE			0x1000
+
+// TODO get from driver.
+#define BYT_PANIC_OFFSET(x)	(x)
 
 struct byt_data {
 	void *bar[MAX_BAR_COUNT];
@@ -169,7 +175,7 @@ static void dsp_write64(struct fuzz *fuzzer,
 			~(dsp_read64(fuzzer, bar, SHIM_IMRX));
 
 		printf(
-			"irq: masking %x mask %x active %x\n",
+			"irq: masking %lx mask %lx active %x\n",
 			dsp_read64(fuzzer, bar, SHIM_ISRD),
 			dsp_read64(fuzzer, bar, SHIM_IMRD), active);
 		break;
@@ -224,7 +230,7 @@ static int byt_cmd_done(struct fuzz *fuzzer, int dir)
 						   SHIM_BYT_IPCD_DONE);
 
 		/* unmask busy interrupt */
-		dsp_update_bits64_unlocked(fuzzer), BYT_DSP_BAR, SHIM_IMRX,
+		dsp_update_bits64_unlocked(fuzzer, BYT_DSP_BAR, SHIM_IMRX,
 						   SHIM_IMRX_BUSY, 0);
 	} else {
 		/* clear DONE bit - tell DSP we have completed */
@@ -300,7 +306,7 @@ static int byt_irq_thread(int irq, void *context)
 		if (!data->boot_complete) {
 			/* use a mutex here to wake init code */
 			data->boot_complete = 1;
-			pthread_mutex_unlock(data->mutex);
+			pthread_mutex_unlock(&data->mutex);
 			return IRQ_HANDLED;
 		}
 
@@ -323,9 +329,9 @@ static int byt_send_msg(struct fuzz *fuzzer, struct ipc_msg *msg)
 	uint64_t cmd = msg->header;
 
 	/* send the message */
-	mailbox_write(plat, data->host_box.offset, msg->msg_data,
+	mailbox_write(fuzzer, data->host_box.offset, msg->msg_data,
 			  msg->msg_size);
-	snd_sof_dsp_write64(plat, BYT_DSP_BAR, SHIM_IPCX,
+	dsp_write64(fuzzer, BYT_DSP_BAR, SHIM_IPCX,
 			    cmd | SHIM_BYT_IPCX_BUSY);
 
 	return 0;
@@ -340,7 +346,7 @@ static int byt_get_reply(struct fuzz *fuzzer, struct ipc_msg *msg)
 	uint32_t size;
 
 	/* get reply */
-	mailbox_read(plat, data->host_box.offset, &reply, sizeof(reply));
+	mailbox_read(fuzzer, data->host_box.offset, &reply, sizeof(reply));
 
 	if (reply.error < 0) {
 		size = sizeof(reply);
@@ -348,7 +354,7 @@ static int byt_get_reply(struct fuzz *fuzzer, struct ipc_msg *msg)
 	} else {
 		/* reply correct size ? */
 		if (reply.hdr.size != msg->reply_size) {
-			printf("error: reply expected 0x%zx got 0x%x bytes\n",
+			printf("error: reply expected 0x%x got 0x%x bytes\n",
 				msg->reply_size, reply.hdr.size);
 			size = msg->reply_size;
 			ret = -EINVAL;
@@ -359,7 +365,7 @@ static int byt_get_reply(struct fuzz *fuzzer, struct ipc_msg *msg)
 
 	/* read the message */
 	if (msg->msg_data && size > 0)
-		mailbox_read(plat, data->host_box.offset, msg->reply_data,
+		mailbox_read(fuzzer, data->host_box.offset, msg->reply_data,
 				 size);
 
 	return ret;
@@ -398,7 +404,7 @@ static int bridge_cb(void *data, struct qemu_io_msg *msg)
 }
 
 static int byt_platform_init(struct fuzz *fuzzer,
-							 const struct fuzz_platform *platform)
+							 struct fuzz_platform *platform)
 {
 	struct byt_data *data;
 	struct timespec timeout;
@@ -441,15 +447,15 @@ static int byt_platform_init(struct fuzz *fuzzer,
 
 	timeout.tv_nsec = 0;
 	timeout.tv_sec = 1;
-	data->mutex = PTHREAD_MUTEX_INITIALIZER;
+	//data->mutex = PTHREAD_MUTEX_INITIALIZER; TODO: needed ???? man page says yes ??
 
 	/* first lock the boot wait mutex */
-	pthread_mutex_lock(data->mutex);
+	pthread_mutex_lock(&data->mutex);
 
 	/* now wait for mutex to be unlocked by boot ready message */
 	ret = pthread_cond_timedwait(&cond, &data->mutex, &timeout);
 	if (ret < 0) {
-		fprintf("error: DSP boot timeout\n");
+		fprintf(stderr, "error: DSP boot timeout\n");
 	}
 
 	return ret;
@@ -463,7 +469,7 @@ static void byt_platform_free(struct fuzz *fuzzer)
 	free(data);
 }
 
-const struct fuzz_platform byt_platform = {
+struct fuzz_platform byt_platform = {
 	.name = "byt",
 	.send_msg = byt_send_msg,
 	.get_reply = byt_get_reply,
@@ -472,10 +478,10 @@ const struct fuzz_platform byt_platform = {
 	.num_mem_regions = ARRAY_SIZE(byt_mem),
 	.mem_region = byt_mem,
 	.num_reg_regions = ARRAY_SIZE(byt_io),
-	.mem_region = byt_io,
+	.reg_region = byt_io,
 };
 
-const struct fuzz_platform cht_platform = {
+struct fuzz_platform cht_platform = {
 	.name = "cht",
 	.send_msg = byt_send_msg,
 	.get_reply = byt_get_reply,
@@ -484,6 +490,6 @@ const struct fuzz_platform cht_platform = {
 	.num_mem_regions = ARRAY_SIZE(byt_mem),
 	.mem_region = byt_mem,
 	.num_reg_regions = ARRAY_SIZE(byt_io),
-	.mem_region = byt_io,
+	.reg_region = byt_io,
 };
 

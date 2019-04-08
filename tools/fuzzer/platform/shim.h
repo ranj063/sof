@@ -9,6 +9,7 @@
 #define __SOF_INTEL_SHIM_H
 
 #define BIT(x)		(1 << x)
+#define BIT_ULL(x)		(1ULL << x)
 
 #define SHIM_OFFSET	0
 

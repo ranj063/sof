@@ -38,7 +38,7 @@
 #include <stdio.h>
 #include <glib.h>
 #include <errno.h>
-#include "qemu/io-bridge.h"
+#include "qemu-bridge.h"
 
 /* set to 1 to enable debug */
 static int io_bridge_debug = 1;//QEMU_IO_DEBUG;
