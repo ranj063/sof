@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
 
 found:
 	ret = platform[i]->init(&fuzzer, platform[i]);
-	if (ret < 0) {
+	if (ret == ETIMEDOUT) {
 		fprintf(stderr, "error: platform %s failed to initialise\n",
 				platform_name);
 		exit(EXIT_FAILURE);
