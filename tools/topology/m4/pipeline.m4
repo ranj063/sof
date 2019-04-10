@@ -38,9 +38,9 @@ define(`W_PIPELINE',
 dnl PIPELINE_PCM_ADD(pipeline,
 dnl     pipe id, pcm, max channels, format,
 dnl     frames, period, priority, core,
-dnl     time_domain)
+dnl     time_domain, sched_comp)
 define(`PIPELINE_PCM_ADD',
-`ifelse(`$#', `9',
+`ifelse(eval(`$# > 8'), `1',
 `undefine(`PCM_ID')'
 `undefine(`PIPELINE_ID')'
 `undefine(`PIPELINE_CHANNELS')'
@@ -59,6 +59,7 @@ define(`PIPELINE_PCM_ADD',
 `define(`SCHEDULE_PRIORITY', $8)'
 `define(`SCHEDULE_CORE', $9)'
 `define(`SCHEDULE_TIME_DOMAIN', $10)'
+`define(`SCHED_COMP', $11)'
 `define(`DAI_FORMAT', $5)'
 `include($1)'
 `DEBUG_PCM_ADD($1, $3)'
