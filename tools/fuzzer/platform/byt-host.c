@@ -26,6 +26,8 @@
 #include <pthread.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
+#include <sys/time.h>
 #include "shim.h"
 #include <uapi/ipc/trace.h>
 #include "../fuzzer.h"
@@ -59,6 +61,7 @@
 
 // TODO get from driver.
 #define BYT_PANIC_OFFSET(x)	(x)
+//pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct byt_data {
 	void *bar[MAX_BAR_COUNT];
@@ -404,11 +407,17 @@ static int bridge_cb(void *data, struct qemu_io_msg *msg)
 }
 
 static int byt_platform_init(struct fuzz *fuzzer,
-							 struct fuzz_platform *platform)
+			     struct fuzz_platform *platform)
 {
 	struct byt_data *data;
 	struct timespec timeout;
-	pthread_cond_t cond;
+	struct timeval tp;
+	char *arguments[] = {"sh",
+					  "../../../../qemu/xtensa-host.sh",
+					  "byt", "-k",
+					  "../../../build_byt_gcc/sof-byt.ri",
+					  "-o", "2.0", "byt-dump.txt", NULL};
+	pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 	int i;
 	int ret;
 
@@ -442,20 +451,24 @@ static int byt_platform_init(struct fuzz *fuzzer,
 	/* initialise bridge to qemu */
 	qemu_io_register_parent(platform->name, &bridge_cb, (void*)fuzzer);
 
-	// TODO; at this point start qemu
-	//exec("name of qemu shell script with args");
+	if (fork() == 0) {
+		/* child process starts qemu */
+		execv("/bin/bash", arguments);
+	} else {
+		gettimeofday(&tp, NULL);
+		timeout.tv_sec  = tp.tv_sec;
+		timeout.tv_nsec = tp.tv_usec * 1000;
+		timeout.tv_sec += 5; /* TODO: adjust timeout */
 
-	timeout.tv_nsec = 0;
-	timeout.tv_sec = 1;
-	//data->mutex = PTHREAD_MUTEX_INITIALIZER; TODO: needed ???? man page says yes ??
+		/* first lock the boot wait mutex */
+		pthread_mutex_lock(&data->mutex);
 
-	/* first lock the boot wait mutex */
-	pthread_mutex_lock(&data->mutex);
-
-	/* now wait for mutex to be unlocked by boot ready message */
-	ret = pthread_cond_timedwait(&cond, &data->mutex, &timeout);
-	if (ret < 0) {
-		fprintf(stderr, "error: DSP boot timeout\n");
+		/* now wait for mutex to be unlocked by boot ready message */
+		ret = pthread_cond_timedwait(&cond, &data->mutex, &timeout);
+		if (ret == ETIMEDOUT) {
+			fprintf(stderr, "error: DSP boot timeout\n");
+			pthread_mutex_unlock(&data->mutex);
+		}
 	}
 
 	return ret;
