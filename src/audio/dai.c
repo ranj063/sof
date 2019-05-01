@@ -423,6 +423,23 @@ static int dai_params(struct comp_dev *dev)
 		return -EINVAL;
 	}
 
+	/* set dma channel */
+	if (dd->chan == DMA_CHAN_INVALID)
+		/* get dma channel at first config only */
+		dd->chan = dma_channel_get(dd->dma, dev->params.stream_tag);
+
+	if (dd->chan < 0) {
+		trace_dai_error_with_ids(dev, "dai_config() error: "
+					 "dma_channel_get() failed");
+		return -EIO;
+	}
+
+	/* set up callback */
+	dma_set_cb(dd->dma, dd->chan, DMA_CB_TYPE_IRQ | DMA_CB_TYPE_COPY,
+		   dai_dma_cb, dev);
+
+	dev->is_dma_connected = 1;
+
 	/* for DAI, we should configure its frame_fmt from topology */
 	dev->params.frame_fmt = dconfig->frame_fmt;
 
@@ -505,6 +522,9 @@ static int dai_reset(struct comp_dev *dev)
 	struct dma_sg_config *config = &dd->config;
 
 	trace_dai_with_ids(dev, "dai_reset()");
+
+	dma_channel_put(dd->dma, dd->chan);
+	dd->chan = DMA_CHAN_INVALID;
 
 	dma_sg_free(&config->elem_array);
 
@@ -752,22 +772,6 @@ static int dai_config(struct comp_dev *dev, struct sof_ipc_dai_config *config)
 					 "dev->frame_bytes == 0");
 		return -EINVAL;
 	}
-
-	if (dd->chan == DMA_CHAN_INVALID)
-		/* get dma channel at first config only */
-		dd->chan = dma_channel_get(dd->dma, channel);
-
-	if (dd->chan < 0) {
-		trace_dai_error_with_ids(dev, "dai_config() error: "
-					 "dma_channel_get() failed");
-		return -EIO;
-	}
-
-	/* set up callback */
-	dma_set_cb(dd->dma, dd->chan, DMA_CB_TYPE_IRQ | DMA_CB_TYPE_COPY,
-		   dai_dma_cb, dev);
-
-	dev->is_dma_connected = 1;
 
 	return 0;
 }
