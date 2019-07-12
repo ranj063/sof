@@ -10,7 +10,9 @@
 #define _COMMON_TPLG_H
 
 #include <sound/asoc.h>
+#ifdef BUILD_TESTBENCH
 #include "common_test.h"
+#endif
 
 /*
  * TODO: include these token from kernel uapi header
@@ -20,6 +22,16 @@
 /* buffers */
 #define SOF_TKN_BUF_SIZE                        100
 #define SOF_TKN_BUF_CAPS                        101
+
+#ifdef BUILD_FUZZER
+/* DAI */
+/* Token retired with ABI 3.2, do not use for new capabilities
+ * #define      SOF_TKN_DAI_DMAC_CONFIG                 153
+ */
+#define SOF_TKN_DAI_TYPE                        154
+#define SOF_TKN_DAI_INDEX                       155
+#define SOF_TKN_DAI_DIRECTION                   156
+#endif
 
 /* scheduling */
 #define SOF_TKN_SCHED_PERIOD                    200
@@ -36,6 +48,11 @@
 /* SRC */
 #define SOF_TKN_SRC_RATE_IN                     300
 #define SOF_TKN_SRC_RATE_OUT                    301
+
+#ifdef BUILD_FUZZER
+/* PCM */
+#define SOF_TKN_PCM_DMAC_CONFIG                 353
+#endif
 
 /* Generic components */
 #define SOF_TKN_COMP_PERIOD_SINK_COUNT          400
@@ -154,6 +171,35 @@ static const struct sof_topology_token comp_tokens[] = {
 		offsetof(struct sof_ipc_comp_config, frame_fmt), 0},
 };
 
+#ifdef BUILD_FUZZER
+/* PCM */
+static const struct sof_topology_token pcm_tokens[] = {
+	{SOF_TKN_PCM_DMAC_CONFIG, SND_SOC_TPLG_TUPLE_TYPE_WORD,
+	 get_token_uint32_t,
+	 offsetof(struct sof_ipc_comp_host, dmac_config), 0},
+};
+
+/* DAI */
+enum sof_ipc_dai_type find_dai(const char *name);
+
+int get_token_dai_type(void *elem, void *object, uint32_t offset,
+		       uint32_t size);
+static const struct sof_topology_token dai_tokens[] = {
+	{SOF_TKN_DAI_TYPE, SND_SOC_TPLG_TUPLE_TYPE_STRING, get_token_dai_type,
+		offsetof(struct sof_ipc_comp_dai, type), 0},
+	{SOF_TKN_DAI_INDEX, SND_SOC_TPLG_TUPLE_TYPE_WORD, get_token_uint32_t,
+		offsetof(struct sof_ipc_comp_dai, dai_index), 0},
+	{SOF_TKN_DAI_DIRECTION, SND_SOC_TPLG_TUPLE_TYPE_WORD,
+	get_token_uint32_t,
+	offsetof(struct sof_ipc_comp_dai, direction), 0},
+};
+
+struct sof_dai_types {
+	const char *name;
+	enum sof_ipc_dai_type type;
+};
+#endif
+
 int sof_parse_tokens(void *object,
 		     const struct sof_topology_token *tokens,
 		     int count, struct snd_soc_tplg_vendor_array *array,
@@ -171,8 +217,10 @@ void sof_parse_word_tokens(void *object,
 			   int count,
 			   struct snd_soc_tplg_vendor_array *array);
 
+#ifdef BUILD_TESTBENCH
 int parse_topology(struct sof *sof, struct shared_lib_table *library_table,
 		   struct testbench_prm *tp, int *fr_id, int *fw_id,
 		   int *sched_id, char *pipeline_msg);
+#endif
 
 #endif
