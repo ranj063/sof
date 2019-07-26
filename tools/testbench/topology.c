@@ -203,8 +203,6 @@ static int tplg_load_fileread(int comp_id, int pipeline_id, int size,
 	return 0;
 }
 
-
-
 /* load fileread component */
 static int load_fileread(void *dev, int comp_id, int pipeline_id,
 			 int size, int *fr_id, int *sched_id,

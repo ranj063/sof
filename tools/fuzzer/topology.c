@@ -39,7 +39,7 @@ enum sof_ipc_dai_type find_dai(const char *name)
 
 FILE *file;
 char pipeline_string[DEBUG_MSG_LEN];
-void register_comp(int comp_type){}
+void register_comp(int comp_type) {}
 
 int find_widget(struct comp_info *temp_comp_list, int count, char *name)
 {
@@ -162,7 +162,7 @@ static int load_pcm(void *dev, int comp_id, int pipeline_id, int size, int dir)
 int load_aif_in_out(void *dev, int dev_type, int comp_id, int pipeline_id,
 		    int size, int *fr_id, int *sched_id, void *tp, int dir)
 {
-	if(dev_type == FUZZER_DEV)
+	if (dev_type == FUZZER_DEV)
 		return load_pcm(dev, comp_id, pipeline_id, size, dir);
 
 	return -EINVAL;
@@ -197,7 +197,7 @@ static int load_dai(struct fuzz *fuzzer, int comp_id, int pipeline_id,
 int load_dai_in_out(void *dev, int dev_type, int comp_id, int pipeline_id,
 		    int size, int *fw_id, void *tp)
 {
-	if(dev_type == FUZZER_DEV)
+	if (dev_type == FUZZER_DEV)
 		return load_dai(dev, comp_id, pipeline_id, size);
 
 	return -EINVAL;

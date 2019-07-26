@@ -241,7 +241,7 @@ int tplg_load_src(int comp_id, int pipeline_id, int size,
 int tplg_load_mixer(int comp_id, int pipeline_id, int size,
 		    struct sof_ipc_comp_mixer *mixer, FILE *file);
 int tplg_load_graph(int num_comps, int pipeline_id,
-		    struct comp_info *temp_comp_list, char * pipeline_string,
+		    struct comp_info *temp_comp_list, char *pipeline_string,
 		    struct sof_ipc_pipe_comp_connect *connection, FILE *file,
 		    int route_num, int count);
 
