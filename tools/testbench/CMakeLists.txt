@@ -32,6 +32,17 @@ set(sof_source_directory "${PROJECT_SOURCE_DIR}/../..")
 set(sof_install_directory "${PROJECT_BINARY_DIR}/sof_ep/install")
 set(sof_binary_directory "${PROJECT_BINARY_DIR}/sof_ep/build")
 
+add_library(tplg_parser SHARED
+	tplg_parser.c
+)
+
+target_include_directories(tplg_parser PRIVATE 
+	"${CMAKE_CURRENT_SOURCE_DIR}/include"
+	"${SOF_ROOT_SOURCE_DIRECTORY}/src/include"
+)
+
+install(TARGETS tplg_parser DESTINATION lib)
+
 include(ExternalProject)
 
 ExternalProject_Add(sof_ep
@@ -59,6 +70,7 @@ set_target_properties(sof_library PROPERTIES IMPORTED_LOCATION "${sof_install_di
 add_dependencies(sof_library sof_ep)
 
 target_link_libraries(testbench PRIVATE sof_library)
+target_link_libraries(testbench PRIVATE tplg_parser)
 target_include_directories(testbench PRIVATE ${sof_install_directory}/include)
 
 set_target_properties(testbench

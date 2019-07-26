@@ -1,7 +1,7 @@
 add_executable(sof-fuzzer
 	main.c
 	qemu-bridge.c
-	../testbench/topology.c
+	topology.c
 	platform/byt-host.c
 )
 
@@ -16,6 +16,8 @@ find_library(LIBRT rt)
 if(LIBRT)
 	target_link_libraries(sof-fuzzer PRIVATE ${LIBRT})
 endif()
+
+target_link_libraries(sof-fuzzer PRIVATE -ltplg_parser)
 
 target_include_directories(sof-fuzzer PRIVATE
 	"${SOF_ROOT_SOURCE_DIRECTORY}/src/include"

@@ -10,9 +10,13 @@
 #define _COMMON_TPLG_H
 
 #include <sound/asoc.h>
+#include <ipc/dai.h>
 #ifdef BUILD_TESTBENCH
 #include "common_test.h"
 #endif
+
+#define SOF_DEV 1
+#define FUZZER_DEV 2
 
 /*
  * TODO: include these token from kernel uapi header
@@ -23,7 +27,6 @@
 #define SOF_TKN_BUF_SIZE                        100
 #define SOF_TKN_BUF_CAPS                        101
 
-#ifdef BUILD_FUZZER
 /* DAI */
 /* Token retired with ABI 3.2, do not use for new capabilities
  * #define      SOF_TKN_DAI_DMAC_CONFIG                 153
@@ -31,7 +34,6 @@
 #define SOF_TKN_DAI_TYPE                        154
 #define SOF_TKN_DAI_INDEX                       155
 #define SOF_TKN_DAI_DIRECTION                   156
-#endif
 
 /* scheduling */
 #define SOF_TKN_SCHED_PERIOD                    200
@@ -49,10 +51,8 @@
 #define SOF_TKN_SRC_RATE_IN                     300
 #define SOF_TKN_SRC_RATE_OUT                    301
 
-#ifdef BUILD_FUZZER
 /* PCM */
 #define SOF_TKN_PCM_DMAC_CONFIG                 353
-#endif
 
 /* Generic components */
 #define SOF_TKN_COMP_PERIOD_SINK_COUNT          400
@@ -171,7 +171,6 @@ static const struct sof_topology_token comp_tokens[] = {
 		offsetof(struct sof_ipc_comp_config, frame_fmt), 0},
 };
 
-#ifdef BUILD_FUZZER
 /* PCM */
 static const struct sof_topology_token pcm_tokens[] = {
 	{SOF_TKN_PCM_DMAC_CONFIG, SND_SOC_TPLG_TUPLE_TYPE_WORD,
@@ -198,7 +197,6 @@ struct sof_dai_types {
 	const char *name;
 	enum sof_ipc_dai_type type;
 };
-#endif
 
 int sof_parse_tokens(void *object,
 		     const struct sof_topology_token *tokens,
@@ -216,11 +214,52 @@ void sof_parse_word_tokens(void *object,
 			   const struct sof_topology_token *tokens,
 			   int count,
 			   struct snd_soc_tplg_vendor_array *array);
+int get_token_dai_type(void *elem, void *object, uint32_t offset,
+		       uint32_t size);
+enum sof_ipc_dai_type find_dai(const char *name);
 
 #ifdef BUILD_TESTBENCH
 int parse_topology(struct sof *sof, struct shared_lib_table *library_table,
 		   struct testbench_prm *tp, int *fr_id, int *fw_id,
 		   int *sched_id, char *pipeline_msg);
 #endif
+
+int tplg_read_array(struct snd_soc_tplg_vendor_array *array, FILE *file);
+int tplg_load_buffer(int comp_id, int pipeline_id, int size,
+		struct sof_ipc_buffer *buffer, FILE *file);
+int tplg_load_pcm(int comp_id, int pipeline_id, int size, int dir,
+		  struct sof_ipc_comp_host *host, FILE *file);
+int tplg_load_dai(int comp_id, int pipeline_id, int size,
+		  struct sof_ipc_comp_dai *comp_dai, FILE *file);
+int tplg_load_pga(int comp_id, int pipeline_id, int size,
+		  struct sof_ipc_comp_volume *volume, FILE *file);
+int tplg_load_pipeline(int comp_id, int pipeline_id, int size,
+		  struct sof_ipc_pipe_new *pipeline, FILE *file);
+int tplg_load_controls(int num_kcontrols, FILE *file);
+int tplg_load_src(int comp_id, int pipeline_id, int size,
+	     struct sof_ipc_comp_src *src, FILE *file);
+int tplg_load_mixer(int comp_id, int pipeline_id, int size,
+		    struct sof_ipc_comp_mixer *mixer, FILE *file);
+int tplg_load_graph(int num_comps, int pipeline_id,
+		    struct comp_info *temp_comp_list, char * pipeline_string,
+		    struct sof_ipc_pipe_comp_connect *connection, FILE *file,
+		    int route_num, int count);
+
+int load_pga(void *dev, int comp_id, int pipeline_id, int size);
+int load_aif_in_out(void *dev, int dev_type, int comp_id, int pipeline_id,
+		    int size, int *fr_id, int *sched_id, void *tp, int dir);
+int load_dai_in_out(void *dev, int dev_type, int comp_id, int pipeline_id,
+		    int size, int *fw_id, void *tp);
+int load_buffer(void *dev, int comp_id, int pipeline_id, int size);
+int load_pipeline(void *dev, int comp_id, int pipeline_id, int size,
+		  int *sched_id);
+int load_src(void *dev, int comp_id, int pipeline_id, int size, void *params);
+int load_mixer(void *dev, int comp_id, int pipeline_id, int size);
+int load_widget(void *dev, int dev_type, struct comp_info *temp_comp_list,
+		int comp_id, int comp_index, int pipeline_id,
+		void *tp, int *fr_id, int *fw_id, int *sched_id, FILE *file);
+void register_comp(int comp_type);
+int find_widget(struct comp_info *temp_comp_list, int count, char *name);
+
 
 #endif
