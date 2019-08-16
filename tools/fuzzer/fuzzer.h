@@ -86,6 +86,7 @@ struct fuzz_platform {
 	void (*mailbox_write)(struct fuzz *fuzzer, unsigned int offset,
 			      void *mbox_data, unsigned int size);
 	void (*fw_ready)(struct fuzz *fuzzer);
+	unsigned int (*get_dsp_box_offset)(struct fuzz *fuzzer);
 
 	/* registers */
 	struct fuzzer_reg_space *reg_region;
@@ -134,5 +135,6 @@ int parse_tplg(struct fuzz *fuzzer, char *tplg_filename);
 
 extern struct fuzz_platform byt_platform;
 extern struct fuzz_platform cht_platform;
+extern struct fuzz_platform apl_platform;
 
 #endif

@@ -486,6 +486,12 @@ static void byt_fw_ready(struct fuzz *fuzzer)
 	       version.major, version.minor, version.tag);
 }
 
+static unsigned int byt_dsp_box_offset(struct fuzz *fuzzer)
+{
+	struct byt_data *data = fuzzer->platform_data;
+	return data->dsp_box.offset;
+}
+
 struct fuzz_platform byt_platform = {
 	.name = "byt",
 	.send_msg = byt_send_msg,
@@ -495,6 +501,7 @@ struct fuzz_platform byt_platform = {
 	.mailbox_read = mailbox_read,
 	.mailbox_write = mailbox_write,
 	.fw_ready = byt_fw_ready,
+	.get_dsp_box_offset = byt_dsp_box_offset,
 	.num_mem_regions = ARRAY_SIZE(byt_mem),
 	.mem_region = byt_mem,
 	.num_reg_regions = ARRAY_SIZE(byt_io),
@@ -509,6 +516,7 @@ struct fuzz_platform cht_platform = {
 	.free = byt_platform_free,
 	.mailbox_read = mailbox_read,
 	.mailbox_write = mailbox_write,
+	.get_dsp_box_offset = byt_dsp_box_offset,
 	.num_mem_regions = ARRAY_SIZE(byt_mem),
 	.mem_region = byt_mem,
 	.num_reg_regions = ARRAY_SIZE(byt_io),

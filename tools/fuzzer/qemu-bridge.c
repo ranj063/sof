@@ -29,7 +29,7 @@
 #include "qemu-bridge.h"
 
 /* set to 1 to enable debug */
-static int io_bridge_debug;//QEMU_IO_DEBUG;
+static int io_bridge_debug=1;//QEMU_IO_DEBUG;
 
 /* we can either be parent or child */
 #define ROLE_NONE    0

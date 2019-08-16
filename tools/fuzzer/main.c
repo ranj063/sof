@@ -70,7 +70,7 @@ uint32_t trace_cmd_types[] = {SOF_IPC_TRACE_DMA_PARAMS,
 			      SOF_IPC_TRACE_DMA_POSITION};
 
 /* list of supported target platforms */
-static struct fuzz_platform *platform[] = { &byt_platform, &cht_platform};
+static struct fuzz_platform *platform[] = { &byt_platform, &cht_platform, &apl_platform};
 
 static void usage(char *name)
 {
@@ -161,9 +161,12 @@ void fuzzer_ipc_msg_rx(struct fuzz *fuzzer)
 	struct sof_ipc_comp_reply r;
 	struct sof_ipc_cmd_hdr hdr;
 	uint32_t cmd;
+	unsigned int dsp_box_offset =
+		fuzzer->platform->get_dsp_box_offset(fuzzer);
 
 	/* read mailbox */
-	fuzzer->platform->mailbox_read(fuzzer, 0, &hdr, sizeof(hdr));
+	fuzzer->platform->mailbox_read(fuzzer, dsp_box_offset, &hdr,
+				       sizeof(hdr));
 	cmd = hdr.cmd & SOF_GLB_TYPE_MASK;
 
 	/* check message type */
@@ -172,6 +175,7 @@ void fuzzer_ipc_msg_rx(struct fuzz *fuzzer)
 		fprintf(stderr, "error: ipc reply unknown\n");
 		break;
 	case SOF_IPC_FW_READY:
+		printf("fw ready message \n");
 		fuzzer->platform->fw_ready(fuzzer);
 		fuzzer->boot_complete = 1;
 		break;
@@ -181,7 +185,8 @@ void fuzzer_ipc_msg_rx(struct fuzz *fuzzer)
 	case SOF_IPC_GLB_COMP_MSG:
 	case SOF_IPC_GLB_STREAM_MSG:
 	case SOF_IPC_GLB_TRACE_MSG:
-		fuzzer->platform->mailbox_read(fuzzer, 0, &r, sizeof(r));
+		fuzzer->platform->mailbox_read(fuzzer, dsp_box_offset, &r,
+					       sizeof(r));
 		break;
 	default:
 		fprintf(stderr, "error: unknown DSP message 0x%x\n", cmd);
@@ -251,7 +256,7 @@ int fuzzer_send_msg(struct fuzz *fuzzer)
 		fprintf(stderr, "error: IPC timeout\n");
 		ipc_dump_err(&fuzzer->msg);
 		pthread_mutex_unlock(&ipc_mutex);
-		exit(0);
+		exit(EXIT_FAILURE);
 	}
 
 	pthread_mutex_unlock(&ipc_mutex);
@@ -272,16 +277,20 @@ int main(int argc, char *argv[])
 	struct fuzz fuzzer;
 	int ret;
 	char opt;
-	char *topology_file;
+	char *topology_file = NULL;
 	char *platform_name = NULL;
 	int i, j;
 	int regions = 0;
+	size_t bytes;
 
 	/* parse arguments */
-	while ((opt = getopt(argc, argv, "ht:p:")) != -1) {
+	while ((opt = getopt(argc, argv, "h:t:p:")) != -1) {
 		switch (opt) {
 		case 't':
-			topology_file = optarg;
+			bytes = snprintf(NULL, 0, "%s", optarg) + 1;
+			topology_file = (char*)malloc(bytes);
+			sprintf(topology_file, "%s", optarg);
+			printf("top %s\n", topology_file);
 			break;
 		case 'p':
 			platform_name = optarg;
@@ -299,6 +308,12 @@ int main(int argc, char *argv[])
 	/* initialise emulated target device */
 	if (!platform_name) {
 		fprintf(stderr, "error: no target platform specified\n");
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	if (!topology_file) {
+		fprintf(stderr, "error: no topology file specified\n");
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -332,7 +347,7 @@ int main(int argc, char *argv[])
 	fuzzer.msg.reply_data = malloc(SOF_IPC_MSG_MAX_SIZE);
 
 	/* load topology */
-	ret = parse_tplg(&fuzzer, "../topology/sof-byt-rt5651.tplg");
+	ret = parse_tplg(&fuzzer, topology_file);
 	if (ret < 0)
 		exit(EXIT_FAILURE);
 
