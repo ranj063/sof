@@ -122,6 +122,7 @@ static void dcblock_free(struct comp_dev *dev)
 
 	comp_info(dev, "dcblock_free()");
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

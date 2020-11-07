@@ -76,7 +76,8 @@ static struct comp_dev *smart_amp_new(const struct comp_driver *drv,
 
 		if (sad)
 			rfree(sad);
-		rfree(sad);
+		comp_set_drvdata(dev, NULL);
+		rfree(dev);
 		return NULL;
 	}
 
@@ -265,6 +266,7 @@ static void smart_amp_free(struct comp_dev *dev)
 	comp_data_blob_handler_free(sad->model_handler);
 
 	rfree(sad);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

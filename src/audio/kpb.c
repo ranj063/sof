@@ -353,6 +353,7 @@ static void kpb_free(struct comp_dev *dev)
 
 	/* Free KPB */
 	rfree(kpb);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

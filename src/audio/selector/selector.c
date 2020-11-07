@@ -95,6 +95,7 @@ static void selector_free(struct comp_dev *dev)
 	comp_info(dev, "selector_free()");
 
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

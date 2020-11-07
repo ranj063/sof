@@ -310,6 +310,7 @@ static void asrc_free(struct comp_dev *dev)
 	rfree(cd->buf);
 	rfree(cd->asrc_obj);
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

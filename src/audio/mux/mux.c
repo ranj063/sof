@@ -173,6 +173,7 @@ static void mux_free(struct comp_dev *dev)
 	comp_info(dev, "mux_free()");
 
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

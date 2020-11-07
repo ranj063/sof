@@ -256,6 +256,7 @@ static void dai_free(struct comp_dev *dev)
 	dai_put(dd->dai);
 
 	rfree(dd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

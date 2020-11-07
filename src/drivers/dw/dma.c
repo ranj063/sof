@@ -1015,8 +1015,10 @@ static int dw_dma_remove(struct dma *dma)
 
 	pm_runtime_put_sync(DW_DMAC_CLK, dma->plat_data.id);
 
-	for (i = 0; i < dma->plat_data.channels; i++)
+	for (i = 0; i < dma->plat_data.channels; i++) {
 		rfree(dma_chan_get_data(&dma->chan[i]));
+		dma_chan_set_data(&dma->chan[i], NULL);
+	}
 
 	rfree(dma->chan);
 	dma->chan = NULL;

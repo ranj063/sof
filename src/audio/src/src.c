@@ -505,6 +505,7 @@ static void src_free(struct comp_dev *dev)
 		rfree(cd->delay_lines);
 
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

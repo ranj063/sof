@@ -209,6 +209,7 @@ static void drc_free(struct comp_dev *dev)
 	comp_data_blob_handler_free(cd->model_handler);
 
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

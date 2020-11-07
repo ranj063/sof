@@ -580,6 +580,7 @@ static void host_free(struct comp_dev *dev)
 	ipc_msg_free(hd->msg);
 	dma_sg_free(&hd->config.elem_array);
 	rfree(hd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

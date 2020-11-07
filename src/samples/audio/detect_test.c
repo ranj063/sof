@@ -316,6 +316,7 @@ static struct comp_dev *test_keyword_new(const struct comp_driver *drv,
 fail:
 	if (cd)
 		rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 	return NULL;
 }
@@ -329,6 +330,7 @@ static void test_keyword_free(struct comp_dev *dev)
 	ipc_msg_free(cd->msg);
 	comp_data_blob_handler_free(cd->model_handler);
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

@@ -382,6 +382,7 @@ static void crossover_free(struct comp_dev *dev)
 	crossover_reset_state(cd);
 
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

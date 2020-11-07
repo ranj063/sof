@@ -285,8 +285,9 @@ static struct comp_dev *tdfb_new(const struct comp_driver *drv,
 	cd->model_handler = comp_data_blob_handler_new(dev);
 	if (!cd->model_handler) {
 		comp_cl_err(&comp_tdfb, "tdfb_new(): comp_data_blob_handler_new() failed.");
-		rfree(dev);
 		rfree(cd);
+		comp_set_drvdata(dev, NULL);
+		rfree(dev);
 		return NULL;
 	}
 
@@ -294,8 +295,9 @@ static struct comp_dev *tdfb_new(const struct comp_driver *drv,
 	ret = comp_init_data_blob(cd->model_handler, bs, ipc_tdfb->data);
 	if (ret < 0) {
 		comp_cl_err(&comp_tdfb, "tdfb_new(): comp_init_data_blob() failed.");
-		rfree(dev);
 		rfree(cd);
+		comp_set_drvdata(dev, NULL);
+		rfree(dev);
 		return NULL;
 	}
 
@@ -316,6 +318,7 @@ static void tdfb_free(struct comp_dev *dev)
 	comp_data_blob_handler_free(cd->model_handler);
 
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

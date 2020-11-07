@@ -535,6 +535,7 @@ static struct comp_dev *eq_iir_new(const struct comp_driver *drv,
 		comp_cl_err(&comp_eq_iir, "eq_iir_new(): comp_data_blob_handler_new() failed.");
 		rfree(dev);
 		rfree(cd);
+		comp_set_drvdata(dev, NULL);
 		return NULL;
 	}
 
@@ -546,6 +547,7 @@ static struct comp_dev *eq_iir_new(const struct comp_driver *drv,
 		comp_cl_err(&comp_eq_iir, "eq_iir_new(): comp_init_data_blob() failed.");
 		rfree(dev);
 		rfree(cd);
+		comp_set_drvdata(dev, NULL);
 		return NULL;
 	}
 
@@ -566,6 +568,7 @@ static void eq_iir_free(struct comp_dev *dev)
 	comp_data_blob_handler_free(cd->model_handler);
 
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

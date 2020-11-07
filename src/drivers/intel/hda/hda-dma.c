@@ -835,8 +835,10 @@ static int hda_dma_probe(struct dma *dma)
 
 out:
 	if (dma->chan) {
-		for (i = 0; i < dma->plat_data.channels; i++)
+		for (i = 0; i < dma->plat_data.channels; i++) {
 			rfree(dma_chan_get_data(&dma->chan[i]));
+			dma_chan_set_data(&dma->chan[i], NULL);
+		}
 		rfree(dma->chan);
 		dma->chan = NULL;
 	}
@@ -850,8 +852,10 @@ static int hda_dma_remove(struct dma *dma)
 
 	tr_info(&hdma_tr, "hda-dmac :%d -> remove", dma->plat_data.id);
 
-	for (i = 0; i < dma->plat_data.channels; i++)
+	for (i = 0; i < dma->plat_data.channels; i++) {
 		rfree(dma_chan_get_data(&dma->chan[i]));
+		dma_chan_set_data(&dma->chan[i], NULL);
+	}
 
 	rfree(dma->chan);
 	dma->chan = NULL;

@@ -393,6 +393,7 @@ static void volume_free(struct comp_dev *dev)
 	comp_dbg(dev, "volume_free()");
 
 	rfree(cd);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

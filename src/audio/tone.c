@@ -421,6 +421,7 @@ static void tone_free(struct comp_dev *dev)
 	comp_info(dev, "tone_free()");
 
 	rfree(td);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

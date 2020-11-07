@@ -153,6 +153,7 @@ static void mixer_free(struct comp_dev *dev)
 	comp_dbg(dev, "mixer_free()");
 
 	rfree(md);
+	comp_set_drvdata(dev, NULL);
 	rfree(dev);
 }
 

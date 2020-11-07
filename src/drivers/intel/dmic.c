@@ -1571,6 +1571,7 @@ static int dmic_probe(struct dai *dai)
 	if (dmic->irq < 0) {
 		ret = dmic->irq;
 		rfree(dmic);
+		dai_set_drvdata(dai, NULL);
 		return ret;
 	}
 
@@ -1578,6 +1579,7 @@ static int dmic_probe(struct dai *dai)
 	if (ret < 0) {
 		dai_err(dai, "dmic failed to allocate IRQ");
 		rfree(dmic);
+		dai_set_drvdata(dai, NULL);
 		return ret;
 	}
 
