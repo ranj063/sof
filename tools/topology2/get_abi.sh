@@ -10,10 +10,8 @@ ABI_PATCH=$(awk '/^ *# *define *SOF_ABI_PATCH / { print $3 }' $1/src/include/ker
 cat $2
 cat <<EOF_HEADER
 
-Object.manifest."0" {
-	name	"sof_manifest"
-	Object.data."0" {
-		name	"sof_manifest"
+Object.Base.manifest."sof_manifest" {
+	Object.Base.data."sof_manifest" {
 EOF_HEADER
 printf '\t\tbytes\t"0x%02x,' "$ABI_MAJOR"
 printf "0x%02x," "$ABI_MINOR"
