@@ -11,7 +11,7 @@ cat $2
 cat <<EOF_HEADER
 
 Object.Base.manifest."sof_manifest" {
-	Object.Base.data."sof_manifest" {
+	Object.Base.data."SOF ABI" {
 EOF_HEADER
 printf '\t\tbytes\t"0x%02x,' "$ABI_MAJOR"
 printf "0x%02x," "$ABI_MINOR"

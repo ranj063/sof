@@ -481,6 +481,8 @@ static int ipc_dai_config_set(struct sof_ipc_dai_config *config)
 	struct dai *dai;
 	int ret;
 
+	tr_info(&ipc_tr, "ipc: tplg -> DAI_CONFIG");
+
 	/* get DAI */
 	dai = dai_get(config->type, config->dai_index, 0 /* existing only */);
 	if (!dai) {
