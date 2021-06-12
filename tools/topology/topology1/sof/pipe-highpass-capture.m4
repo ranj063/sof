@@ -50,6 +50,8 @@ ifdef(`PIPELINE_FILTER1', , `define(PIPELINE_FILTER1, eq_iir_coef_highpass_40hz_
 define(DEF_EQIIR_PRIV, PIPELINE_FILTER1)
 include(PIPELINE_FILTER1)
 
+define(DEF_EQIIR_COEF, concat(`eqiir_coef_', PIPELINE_ID))
+
 # EQ Bytes control with max value of 255
 define(DEF_EQIIR_COEF, concat(`eqiir_bytes_', PIPELINE_ID))
 C_CONTROLBYTES(DEF_EQIIR_COEF, PIPELINE_ID,
