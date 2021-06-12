@@ -7,7 +7,6 @@ ABI_MAJOR=$(awk '/^ *# *define *SOF_ABI_MAJOR / { print $3 }' $1/src/include/ker
 ABI_MINOR=$(awk '/^ *# *define *SOF_ABI_MINOR / { print $3 }' $1/src/include/kernel/abi.h)
 ABI_PATCH=$(awk '/^ *# *define *SOF_ABI_PATCH / { print $3 }' $1/src/include/kernel/abi.h)
 
-cat $2
 cat <<EOF_HEADER
 
 Object.Base.manifest."sof_manifest" {

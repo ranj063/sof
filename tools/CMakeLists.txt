@@ -26,8 +26,6 @@ include(${SOF_ROOT_SOURCE_DIRECTORY}/scripts/cmake/git-submodules.cmake)
 add_subdirectory(topology)
 # Includes test/topology/
 add_subdirectory(test)
-# include topology2
-add_subdirectory(topology2)
 
 add_subdirectory(probes)
 add_subdirectory(logger)
