@@ -2,8 +2,33 @@
 
 # Array of "input-file-name;output-file-name;pre-processor macros separated by comma"
 set(TPLGS
-	# HDA Generic topology
-	"sof-hda-generic\;sof-hda-generic\;DYNAMIC_PIPELINE=1"
+# HDA Generic topology
+"sof-hda-generic\;sof-hda-generic\;\
+DYNAMIC_PIPELINE=1"
+
+# HDA Generic topology with 1ch DMIC
+"sof-hda-generic\;sof-hda-generic-1ch\; \
+DYNAMIC_PIPELINE=1,\
+DMIC_INCLUDE=1,\
+DMIC_CH_COUNT=1"
+
+# HDA Generic topology with 2ch DMIC
+"sof-hda-generic\;sof-hda-generic-2ch\;\
+DYNAMIC_PIPELINE=1,\
+DMIC_INCLUDE=1,\
+DMIC_CH_COUNT=2"
+
+# HDA Generic topology with 3ch DMIC
+"sof-hda-generic\;sof-hda-generic-3ch\;\
+DYNAMIC_PIPELINE=1,\
+DMIC_INCLUDE=1,\
+DMIC_CH_COUNT=3"
+
+# HDA Generic topology with 4ch DMIC
+"sof-hda-generic\;sof-hda-generic-4ch\;\
+DYNAMIC_PIPELINE=1,\
+DMIC_INCLUDE=1,\
+DMIC_CH_COUNT=4"
 )
 
 add_custom_target(topologies2 ALL
