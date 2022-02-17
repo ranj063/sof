@@ -10,18 +10,21 @@ set(TPLGS
 # topologies below.
 # TGL: CAVS HDA topology with mixer-based pipelines for HDA and passthrough pipelines for HDMI
 "cavs-passthrough-hdmi\;cavs-mixin-mixout-hda-2ch-tgl\;\
-HDA_CONFIG=mix,NUM_DMICS=2,PREPROCESS_PLUGINS=nhlt,NHLT_BIN=nhlt.bin"
+HDA_CONFIG=mix,NUM_DMICS=2,PREPROCESS_PLUGINS=nhlt,NHLT_BIN=nhlt-cavs-mixin-mixout-hda-2ch-tgl.bin"
 # CNL: CAVS HDA topology with mixer-based pipelines for HDA and passthrough pipelines for HDMI
 "cavs-passthrough-hdmi\;cavs-mixin-mixout-hda-2ch-cnl\;\
-HDA_CONFIG=mix,NUM_DMICS=2,PLATFORM=cnl,PREPROCESS_PLUGINS=nhlt,NHLT_BIN=nhlt.bin"
+HDA_CONFIG=mix,NUM_DMICS=2,PLATFORM=cnl,PREPROCESS_PLUGINS=nhlt,\
+NHLT_BIN=nhlt-cavs-mixin-mixout-hda-2ch-cnl.bin"
 # TGL: CAVS HDA topology with mixer-based pipelines for HDA and passthrough pipelines for HDMI
 "cavs-passthrough-hdmi\;cavs-mixin-mixout-hda-4ch-tgl\;\
 HDA_CONFIG=mix,NUM_DMICS=4,PLATFORM=cnl,PDM1_MIC_A_ENABLE=1,PDM1_MIC_B_ENABLE=1,\
-PREPROCESS_PLUGINS=nhlt,NHLT_BIN=nhlt.bin"
+PREPROCESS_PLUGINS=nhlt,NHLT_BIN=nhlt-cavs-mixin-mixout-hda-4ch-tgl.bin"
 # CNL: CAVS HDA topology with mixer-based pipelines for HDA and passthrough pipelines for HDMI
 "cavs-passthrough-hdmi\;cavs-mixin-mixout-hda-4ch-cnl\;\
 HDA_CONFIG=mix,NUM_DMICS=4,PLATFORM=cnl,PDM1_MIC_A_ENABLE=1,PDM1_MIC_B_ENABLE=1,\
-PREPROCESS_PLUGINS=nhlt,NHLT_BIN=nhlt.bin"
+PREPROCESS_PLUGINS=nhlt,NHLT_BIN=nhlt-cavs-mixin-mixout-hda-4ch-cnl.bin"
+# TGL rt5682
+"cavs-rt5682\;cavs-rt5682\;PREPROCESS_PLUGINS=nhlt,NHLT_BIN=nhlt-cavs-rt5682.bin"
 
 # CAVS SDW topology with passthrough pipelines
 "cavs-sdw\;cavs-sdw"
