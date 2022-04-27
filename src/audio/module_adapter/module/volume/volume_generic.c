@@ -52,15 +52,16 @@ static inline int32_t vol_mult_s24_to_s24(int32_t x, int32_t vol)
  * Copy and scale volume from 24/32 bit source buffer
  * to 24/32 bit destination buffer.
  */
-static void vol_s24_to_s24(struct comp_dev *dev, struct audio_stream *sink,
-			   const struct audio_stream *source, uint32_t frames)
+static void vol_s24_to_s24(struct processing_module *mod, struct input_stream_buffer *bsource,
+			   struct output_stream_buffer *bsink, uint32_t frames, uint16_t nch)
 {
-	struct vol_data *cd = comp_get_drvdata(dev);
+	struct vol_data *cd = module_get_private_data(mod);
+	struct audio_stream *source = bsource->data;
+	struct audio_stream *sink = bsink->data;
 	int32_t vol;
 	int32_t *x, *x0;
 	int32_t *y, *y0;
 	int nmax, n, i, j;
-	const int nch = source->channels;
 	int remaining_samples = frames * nch;
 #if CONFIG_COMP_PEAK_VOL
 	int32_t tmp = INT_MIN(32);
@@ -68,6 +69,9 @@ static void vol_s24_to_s24(struct comp_dev *dev, struct audio_stream *sink,
 
 	x = source->r_ptr;
 	y = sink->w_ptr;
+
+	bsource->consumed += remaining_samples << 2;
+	bsink->size += remaining_samples << 2;
 	while (remaining_samples) {
 		nmax = VOL_BYTES_TO_S32_SAMPLES(audio_stream_bytes_without_wrap(source, x));
 		n = MIN(remaining_samples, nmax);
@@ -110,15 +114,16 @@ static void vol_s24_to_s24(struct comp_dev *dev, struct audio_stream *sink,
  * Copy and scale volume from 32 bit source buffer
  * to 32 bit destination buffer.
  */
-static void vol_s32_to_s32(struct comp_dev *dev, struct audio_stream *sink,
-			   const struct audio_stream *source, uint32_t frames)
+static void vol_s32_to_s32(struct processing_module *mod, struct input_stream_buffer *bsource,
+			   struct output_stream_buffer *bsink, uint32_t frames, uint16_t nch)
 {
-	struct vol_data *cd = comp_get_drvdata(dev);
+	struct vol_data *cd = module_get_private_data(mod);
+	struct audio_stream *source = bsource->data;
+	struct audio_stream *sink = bsink->data;
 	int32_t vol;
 	int32_t *x, *x0;
 	int32_t *y, *y0;
 	int nmax, n, i, j;
-	const int nch = source->channels;
 	int remaining_samples = frames * nch;
 #if CONFIG_COMP_PEAK_VOL
 	int32_t tmp = INT_MIN(32);
@@ -126,6 +131,8 @@ static void vol_s32_to_s32(struct comp_dev *dev, struct audio_stream *sink,
 
 	x = source->r_ptr;
 	y = sink->w_ptr;
+	bsource->consumed += remaining_samples << 2;
+	bsink->size += remaining_samples << 2;
 	while (remaining_samples) {
 		nmax = VOL_BYTES_TO_S32_SAMPLES(audio_stream_bytes_without_wrap(source, x));
 		n = MIN(remaining_samples, nmax);
@@ -173,15 +180,16 @@ static void vol_s32_to_s32(struct comp_dev *dev, struct audio_stream *sink,
  * Copy and scale volume from 16 bit source buffer
  * to 16 bit destination buffer.
  */
-static void vol_s16_to_s16(struct comp_dev *dev, struct audio_stream *sink,
-			   const struct audio_stream *source, uint32_t frames)
+static void vol_s16_to_s16(struct processing_module *mod, struct input_stream_buffer *bsource,
+			   struct output_stream_buffer *bsink, uint32_t frames, uint16_t nch)
 {
-	struct vol_data *cd = comp_get_drvdata(dev);
+	struct vol_data *cd = module_get_private_data(mod);
+	struct audio_stream *source = bsource->data;
+	struct audio_stream *sink = bsink->data;
 	int32_t vol;
 	int16_t *x, *x0;
 	int16_t *y, *y0;
 	int nmax, n, i, j;
-	const int nch = source->channels;
 	int remaining_samples = frames * nch;
 #if CONFIG_COMP_PEAK_VOL
 	int16_t tmp = INT_MIN(16);
@@ -189,6 +197,9 @@ static void vol_s16_to_s16(struct comp_dev *dev, struct audio_stream *sink,
 
 	x = source->r_ptr;
 	y = sink->w_ptr;
+
+	bsource->consumed += remaining_samples << 1;
+	bsink->size += remaining_samples << 1;
 	while (remaining_samples) {
 		nmax = VOL_BYTES_TO_S16_SAMPLES(audio_stream_bytes_without_wrap(source, x));
 		n = MIN(remaining_samples, nmax);
