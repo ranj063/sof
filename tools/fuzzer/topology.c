@@ -232,7 +232,7 @@ static int fuzzer_load_pga(struct tplg_context *ctx)
 	struct sof_ipc_comp_reply r;
 	int ret = 0;
 
-	ret = tplg_create_pga(ctx, &volume);
+	ret = tplg_create_pga(ctx, &volume.comp);
 	if (ret < 0)
 		return ret;
 
