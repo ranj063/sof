@@ -5,7 +5,6 @@ if(NOT CONFIG_LIBRARY)
 		host-legacy.c
 		component.c
 		buffer.c
-		channel_map.c
 	)
 	if(CONFIG_COMP_BLOB)
 		add_local_sources(sof data_blob.c)
