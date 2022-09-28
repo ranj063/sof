@@ -419,7 +419,9 @@ static void sys_module_init(void)
  */
 
 void sys_comp_host_init(void);
-void sys_comp_mixer_init(void);
+#if CONFIG_IPC_MAJOR_3
+void sys_comp_module_mixer_interface_init(void);
+#endif
 void sys_comp_dai_init(void);
 void sys_comp_src_init(void);
 void sys_comp_mux_init(void);
@@ -511,12 +513,12 @@ int task_main_start(struct sof *sof)
 			sys_comp_module_gain_interface_init();
 	}
 
-	if (IS_ENABLED(CONFIG_COMP_MIXER)) {
-		sys_comp_mixer_init();
-
-		if (IS_ENABLED(CONFIG_IPC_MAJOR_4))
-			sys_comp_mixin_init();
-	}
+	if (IS_ENABLED(CONFIG_COMP_MIXER))
+#if CONFIG_IPC_MAJOR_3
+		sys_comp_module_mixer_interface_init();
+#else
+		sys_comp_mixin_init();
+#endif
 
 	if (IS_ENABLED(CONFIG_COMP_DAI))
 		sys_comp_dai_init();

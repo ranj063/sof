@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 #ifdef UNIT_TEST
-void sys_comp_mixer_init(void);
+void sys_comp_module_mixer_interface_init(void);
 #endif
 
 #define MIXER_GENERIC
@@ -29,6 +29,15 @@ void sys_comp_mixer_init(void);
 #endif
 
 #endif
+
+/* mixer component private data */
+struct mixer_data {
+	bool sources_inactive;
+
+	void (*mix_func)(struct comp_dev *dev, struct audio_stream __sparse_cache *sink,
+			 const struct audio_stream __sparse_cache **sources, uint32_t count,
+			 uint32_t frames);
+};
 
 /**
  * \brief mixer processing function interface

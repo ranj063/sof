@@ -148,6 +148,7 @@ config COMP_TONE
 config COMP_MIXER
 	bool "Mixer component"
 	default y
+	depends on COMP_MODULE_ADAPTER
 	help
 	  Select for Mixer component
 
