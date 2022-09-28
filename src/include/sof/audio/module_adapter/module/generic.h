@@ -174,6 +174,9 @@ struct processing_module {
 
 	/* module-specific flags for comp_verify_params() */
 	uint32_t verify_params_flags;
+
+	/* flag to indicate module does not pause */
+	bool no_pause;
 };
 
 /*****************************************************************************/
