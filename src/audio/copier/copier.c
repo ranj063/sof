@@ -1713,18 +1713,23 @@ static int copier_params(struct comp_dev *dev, struct sof_ipc_stream_params *par
 				}
 				break;
 			case SOF_COMP_DAI:
-				ret = dai_zephyr_params(cd->dd[i], dev, params,
-							&period_count, &period_bytes,
-							&cd->endpoint[i]->bsource_list,
-							&cd->endpoint[i]->bsink_list);
-				if (ret < 0)
-					break;
+				if (cd->endpoint_num == 1) {
+					ret = dai_zephyr_params(cd->dd[i], dev, params,
+								&period_count, &period_bytes,
+								&cd->endpoint[i]->bsource_list,
+								&cd->endpoint[i]->bsink_list);
+					if (ret < 0)
+						break;
 
-				ret = dev->direction == SOF_IPC_STREAM_PLAYBACK ?
-					dai_playback_params(cd->dd[i], dev,
-							    period_bytes, period_count) :
-					dai_capture_params(cd->dd[i], dev,
-							   period_bytes, period_count);
+					ret = dev->direction == SOF_IPC_STREAM_PLAYBACK ?
+						dai_playback_params(cd->dd[i], dev,
+								    period_bytes, period_count) :
+						dai_capture_params(cd->dd[i], dev,
+								   period_bytes, period_count);
+				} else {
+					ret = cd->endpoint[i]->drv->ops.params(cd->endpoint[i],
+									       params);
+				}
 				break;
 			default:
 				break;
