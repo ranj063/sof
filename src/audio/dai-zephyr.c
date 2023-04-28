@@ -56,8 +56,7 @@ static int dai_comp_trigger_internal(struct dai_data *dd, struct comp_dev *dev, 
 static void dai_atomic_trigger(void *arg, enum notify_id type, void *data)
 {
 	struct comp_dev *dev = arg;
-	struct copier_data *cd = comp_get_drvdata(dev);
-	struct dai_data *dd = cd->dd;
+	struct dai_data *dd = comp_get_drvdata(dev);
 	struct dai_group *group = dd->group;
 
 	/* Atomic context set by the last DAI to receive trigger command */

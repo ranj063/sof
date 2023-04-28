@@ -815,9 +815,6 @@ static void copier_free(struct comp_dev *dev)
 		break;
 	case SOF_COMP_DAI:
 		if (cd->endpoint_num == 1) {
-			if (cd->dd[0]->group)
-				notifier_unregister(dev, cd->dd[0]->group,
-						    NOTIFIER_ID_DAI_TRIGGER);
 			dai_zephyr_free(cd->dd[0]);
 		} else {
 			/* handle multiendpoint case */
@@ -1384,7 +1381,7 @@ static int do_endpoint_copy(struct comp_dev *dev)
 		return ret;
 	} else {
 		if (dev->ipc_config.type == SOF_COMP_HOST && !cd->ipc_gtw)
-			return host_zephyr_copy(cd->hd, dev);
+			return host_zephyr_copy(cd->hd, dev, copier_dma_cb);
 		else if (dev->ipc_config.type == SOF_COMP_DAI)
 			return dai_zephyr_copy(cd->dd[0], dev);
 
@@ -1449,9 +1446,16 @@ static int copier_copy(struct comp_dev *dev)
 
 	comp_dbg(dev, "copier_copy()");
 
-	if ((dev->ipc_config.type == SOF_COMP_HOST || dev->ipc_config.type == SOF_COMP_DAI) &&
-	    !cd->ipc_gtw)
-		return do_endpoint_copy(dev);
+	switch (dev->ipc_config.type) {
+	case SOF_COMP_HOST:
+		if (!cd->ipc_gtw)
+			return do_endpoint_copy(dev);
+	case SOF_COMP_DAI:
+		if (cd->endpoint_num == 1)
+			return do_endpoint_copy(dev);
+	default:
+		break;
+	}
 
 	processed_data.source_bytes = 0;
 
@@ -1691,7 +1695,8 @@ static int copier_params(struct comp_dev *dev, struct sof_ipc_stream_params *par
 							cd->out_fmt->valid_bit_depth / 8;
 					}
 
-					ret = host_zephyr_params(cd->hd, dev, params);
+					ret = host_zephyr_params(cd->hd, dev, params,
+								 copier_notifier_cb);
 					if (ret >= 0)
 						/* set up callback */
 						notifier_register(dev, cd->hd->chan,
@@ -1708,9 +1713,7 @@ static int copier_params(struct comp_dev *dev, struct sof_ipc_stream_params *par
 			case SOF_COMP_DAI:
 				if (cd->endpoint_num == 1) {
 					ret = dai_zephyr_params(cd->dd[i], dev, params,
-								&period_count, &period_bytes,
-								&cd->endpoint[i]->bsource_list,
-								&cd->endpoint[i]->bsink_list);
+								&period_count, &period_bytes);
 					if (ret < 0)
 						break;
 
