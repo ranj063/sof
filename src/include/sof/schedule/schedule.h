@@ -333,6 +333,10 @@ static inline int schedule_task_free(struct task *task)
 	struct schedule_data *sch;
 	struct list_item *slist;
 
+#if CONFIG_LIBRARY
+	return 0;
+#endif
+
 	list_for_item(slist, &schedulers->list) {
 		sch = container_of(slist, struct schedule_data, list);
 		if (task->type == sch->type)

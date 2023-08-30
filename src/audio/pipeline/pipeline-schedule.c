@@ -55,10 +55,12 @@ static void pipeline_schedule_cancel(struct pipeline *p)
 {
 	schedule_task_cancel(p->pipe_task);
 
+#if !CONFIG_LIBRARY
 	/* enable system agent panic, when there are no longer
 	 * DMA driven pipelines
 	 */
 	sa_set_panic_on_delay(true);
+#endif
 }
 
 static enum task_state pipeline_task_cmd(struct pipeline *p,
@@ -428,10 +430,11 @@ void pipeline_comp_trigger_sched_comp(struct pipeline *p,
 /* notify pipeline that this component requires buffers emptied/filled */
 void pipeline_schedule_copy(struct pipeline *p, uint64_t start)
 {
+#if !CONFIG_LIBRARY
 	/* disable system agent panic for DMA driven pipelines */
 	if (!pipeline_is_timer_driven(p))
 		sa_set_panic_on_delay(false);
-
+#endif
 	/*
 	 * With connected pipelines some pipelines can be re-used for multiple
 	 * streams. E.g. if playback pipelines A and B are connected on a mixer,

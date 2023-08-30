@@ -147,6 +147,7 @@ int pipeline_copy(struct pipeline *p)
 	return ret;
 }
 
+#if !CONFIG_LIBRARY
 /* only collect scheduling components */
 static int pipeline_comp_list(struct comp_dev *current,
 			      struct comp_buffer *calling_buf,
@@ -221,6 +222,7 @@ static int pipeline_trigger_list(struct pipeline *p, struct comp_dev *host, int 
 
 	return ret;
 }
+#endif
 
 static void pipeline_trigger_xrun(struct pipeline *p, struct comp_dev **host)
 {
@@ -280,6 +282,25 @@ int pipeline_trigger(struct pipeline *p, struct comp_dev *host, int cmd)
 	switch (cmd) {
 	case COMP_TRIGGER_PAUSE:
 	case COMP_TRIGGER_STOP:
+#if CONFIG_LIBRARY
+		ret = pipeline_trigger_run(p, host, cmd);
+		if (ret >= 0) {
+			switch (cmd) {
+			case COMP_TRIGGER_PRE_START:
+			case COMP_TRIGGER_START:
+			case COMP_TRIGGER_PRE_RELEASE:
+				p->status = COMP_STATE_ACTIVE;
+				break;
+			case COMP_TRIGGER_STOP:
+			case COMP_TRIGGER_PAUSE:
+				p->status = COMP_STATE_PAUSED;
+				break;
+			default:
+				break;
+			}
+		}
+		return ret < 0 ? ret : 0;
+#endif
 		if (p->status == COMP_STATE_PAUSED || p->xrun_bytes) {
 			/* The task isn't running, trigger inline */
 			ret = pipeline_trigger_run(p, host, cmd);
@@ -294,12 +315,31 @@ int pipeline_trigger(struct pipeline *p, struct comp_dev *host, int cmd)
 		COMPILER_FALLTHROUGH;
 	case COMP_TRIGGER_PRE_RELEASE:
 	case COMP_TRIGGER_PRE_START:
+#if CONFIG_LIBRARY
+		ret = pipeline_trigger_run(p, host, cmd);
+		if (ret >= 0) {
+			switch (cmd) {
+			case COMP_TRIGGER_PRE_START:
+			case COMP_TRIGGER_PRE_RELEASE:
+				p->status = COMP_STATE_ACTIVE;
+				break;
+			case COMP_TRIGGER_STOP:
+			case COMP_TRIGGER_PAUSE:
+				p->status = COMP_STATE_PAUSED;
+				break;
+			default:
+				break;
+			}
+		}
+		return ret < 0 ? ret : 0;
+#else
 		/* Add all connected pipelines to the list and trigger them all */
 		ret = pipeline_trigger_list(p, host, cmd);
 		if (ret < 0)
 			return ret;
 		/* IPC response will be sent from the task, unless it was paused */
 		return PPL_STATUS_SCHEDULED;
+#endif
 	}
 
 	return 0;

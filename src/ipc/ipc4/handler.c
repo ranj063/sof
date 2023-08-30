@@ -476,7 +476,8 @@ static int ipc4_set_pipeline_state(struct ipc4_message_request *ipc4)
 	struct ipc4_pipeline_set_state state;
 	struct ipc_comp_dev *ppl_icd;
 	struct ipc *ipc = ipc_get();
-	uint32_t cmd, ppl_count, id;
+	uint32_t cmd, ppl_count;
+	uint32_t id = 0;
 	const uint32_t *ppl_id;
 	bool use_idc = false;
 	uint32_t idx;
@@ -487,9 +488,11 @@ static int ipc4_set_pipeline_state(struct ipc4_message_request *ipc4)
 	state.extension.dat = ipc4->extension.dat;
 	cmd = state.primary.r.ppl_state;
 
+#if !CONFIG_LIBRARY
 	ppl_data = (const struct ipc4_pipeline_set_state_data *)MAILBOX_HOSTBOX_BASE;
 	dcache_invalidate_region((__sparse_force void __sparse_cache *)ppl_data,
 				 sizeof(*ppl_data));
+#endif
 	if (state.extension.r.multi_ppl) {
 		ppl_count = ppl_data->pipelines_count;
 		ppl_id = ppl_data->ppl_id;
@@ -1276,8 +1279,13 @@ void ipc_msg_reply(struct sof_ipc_reply *reply)
 
 void ipc_cmd(struct ipc_cmd_hdr *_hdr)
 {
+#if CONFIG_LIBRARY
+	struct ipc *ipc = ipc_get();
+	struct ipc4_message_request *in = (struct ipc4_message_request *)ipc->comp_data;
+#else
 	/* ignoring _hdr as it does not contain valid data in IPC4/IDC case */
 	struct ipc4_message_request *in = ipc_from_hdr(&msg_data.msg_in);
+#endif
 	enum ipc4_message_target target;
 	int err;
 
@@ -1313,7 +1321,9 @@ void ipc_cmd(struct ipc_cmd_hdr *_hdr)
 	/* FW sends an ipc message to host if request bit is clear */
 	if (in->primary.r.rsp == SOF_IPC4_MESSAGE_DIR_MSG_REQUEST) {
 		struct ipc *ipc = ipc_get();
+#if !CONFIG_LIBRARY
 		char *data = ipc->comp_data;
+#endif
 		struct ipc4_message_reply reply;
 
 		/* Process flow and time stamp for IPC4 msg processed on secondary core :
@@ -1400,6 +1410,10 @@ void ipc_cmd(struct ipc_cmd_hdr *_hdr)
 		tr_dbg(&ipc_tr, "tx-reply\t: %#x|%#x", msg_reply.header,
 		       msg_reply.extension);
 
+#if CONFIG_LIBRARY
+		mailbox_hostbox_write(0, &reply, sizeof(reply));
+#else
 		ipc_msg_send(&msg_reply, data, true);
+#endif
 	}
 }
