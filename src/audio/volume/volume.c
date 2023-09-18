@@ -47,8 +47,8 @@
 
 LOG_MODULE_REGISTER(volume, CONFIG_SOF_LOG_LEVEL);
 
-#include "volume_uuid.h"
-#include "volume.h"
+#include <sof/audio/volume/volume_uuid.h>
+#include <sof/audio/volume/volume.h>
 
 #if CONFIG_FORMAT_S16LE
 /**

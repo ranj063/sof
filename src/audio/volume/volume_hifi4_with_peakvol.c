@@ -19,7 +19,7 @@
 
 LOG_MODULE_DECLARE(volume_hifi4, CONFIG_SOF_LOG_LEVEL);
 
-#include "volume.h"
+#include <sof/audio/volume/volume.h>
 
 #ifdef VOLUME_HIFI4
 

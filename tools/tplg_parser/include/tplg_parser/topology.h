@@ -16,6 +16,9 @@
 #include <ipc/dai.h>
 #include <ipc/topology.h>
 #include <ipc/stream.h>
+#include <ipc4/copier.h>
+#include <ipc4/module.h>
+#include <sof/audio/volume/peak_volume.h>
 #include <kernel/tokens.h>
 #include <sof/list.h>
 
