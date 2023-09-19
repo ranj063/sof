@@ -14,9 +14,10 @@
 #include <ipc4/base_fw.h>
 #include <ipc4/error_status.h>
 #include <ipc4/logging.h>
+#if !CONFIG_LIBRARY
 #include <zephyr/logging/log_backend.h>
 #include <zephyr/logging/log.h>
-
+#endif
 #if CONFIG_LOG_BACKEND_SOF_PROBE
 #include <sof/probe/probe.h>
 #endif
@@ -198,6 +199,12 @@ int ipc4_logging_enable_logs(bool first_block,
 
 #endif
 
+#if CONFIG_LIBRARY
+int ipc4_logging_shutdown(void)
+{
+	return 0;
+}
+#else
 int ipc4_logging_shutdown(void)
 {
 	struct ipc4_log_state_info log_state = { 0 };
@@ -206,3 +213,4 @@ int ipc4_logging_shutdown(void)
 
 	return ipc4_logging_enable_logs(true, true, sizeof(log_state), (char *)&log_state);
 }
+#endif
