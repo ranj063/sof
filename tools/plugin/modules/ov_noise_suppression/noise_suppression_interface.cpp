@@ -11,7 +11,7 @@
 #include <openvino/openvino.hpp>
 
 #include "noise_suppression_interface.h"
-#define NS_MAX_SOURCE_CHANNELS 2
+#define NS_MAX_SOURCE_CHANNELS 4
 
 extern "C" {
 	struct ns_data {
@@ -109,7 +109,7 @@ extern "C" {
 
 		for (ch = 0; ch < NS_MAX_SOURCE_CHANNELS; ch++) {
 			/* split each channel samples and convert to floating point */
-			for (i = ch, j = 0; j < frame_count; i+=2,j++) {
+			for (i = ch, j = 0; j < frame_count; i+=NS_MAX_SOURCE_CHANNELS,j++) {
 				void *inp = &input_data[i];
 
 				/* wrap if needed */
@@ -153,7 +153,7 @@ extern "C" {
 			std::memcpy(dst, src, frame_count * sizeof(float));
 
 			/* convert back to int and write back to output buffer */
-			for (i = 0, j = ch; i < frame_count; i++,j+=2) {
+			for (i = 0, j = ch; i < frame_count; i++,j+=NS_MAX_SOURCE_CHANNELS) {
 				float v = out_wave_fp32[i];
 				void *out = &output_data[j];
 
