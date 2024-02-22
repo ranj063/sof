@@ -139,7 +139,7 @@ int32_t src_output_rates(void);
 
 void src_set_alignment(struct sof_source *source, struct sof_sink *sink);
 
-#if CONFIG_IPC_MAJOR_4
+#if CONFIG_IPC_MAJOR_4 || CONFIG_LIBRARY
 /* src component private data */
 struct ipc4_config_src {
 	struct ipc4_base_module_cfg base;
@@ -269,4 +269,3 @@ int src_free(struct processing_module *mod);
 int src_reset(struct processing_module *mod);
 extern const struct sof_uuid src_uuid;
 extern struct tr_ctx src_tr;
-

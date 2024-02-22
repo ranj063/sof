@@ -541,8 +541,10 @@ int src_params_general(struct processing_module *mod,
 		return  -EINVAL;
 	}
 
-	cd->source_frames = dev->frames * cd->source_rate / cd->sink_rate;
-	cd->sink_frames = dev->frames;
+	cd->source_frames = dev->frames * cd->source_rate / cd->sink_rate * 128;
+	cd->sink_frames = dev->frames * 128;
+
+	comp_info(dev, "ranjani src dev frames %d\n", dev->frames);
 
 	/* Allocate needed memory for delay lines */
 	err = src_buffer_lengths(dev, cd, cd->channels_count);

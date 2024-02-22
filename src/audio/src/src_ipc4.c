@@ -41,7 +41,7 @@
 #include "src.h"
 #include "src_config.h"
 
-/* e61bb28d-149a-4c1f-b709-46823ef5f5a3 */
+/* e61bb28d-149a-4c1f-b709-46823ef5f5ae */
 DECLARE_SOF_RT_UUID("src", src_uuid, 0xe61bb28d, 0x149a, 0x4c1f,
 		    0xb7, 0x09, 0x46, 0x82, 0x3e, 0xf5, 0xf5, 0xae);
 

@@ -22,6 +22,7 @@
 #include <volume/peak_volume.h>
 
 #include "copier/copier.h"
+#define TPLG_DEBUG
 
 #ifdef TPLG_DEBUG
 #define DEBUG_MAX_LENGTH 256

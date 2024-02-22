@@ -25,7 +25,7 @@
 #include <dlfcn.h>
 
 #include <ipc4/error_status.h>
-
+#include <src/src.h>
 #include <tplg_parser/topology.h>
 #include <tplg_parser/tokens.h>
 
@@ -147,25 +147,41 @@ static int plug_dai_in_out(snd_sof_plug_t *plug, int dir)
 static int plug_new_src_ipc(snd_sof_plug_t *plug)
 {
 	struct tplg_context *ctx = &plug->tplg;
-	char tplg_object[MAX_TPLG_OBJECT_SIZE] = {0};
-	struct sof_ipc_comp_src *src =
-		(struct sof_ipc_comp_src *)tplg_object;
-	struct snd_soc_tplg_ctl_hdr *tplg_ctl;
+	struct tplg_comp_info *comp_info = ctx->current_comp_info;
+	struct ipc4_config_src *src;
+	struct snd_soc_tplg_vendor_array *array = &ctx->widget->priv.array[0];
+	const struct sof_topology_token src4_tokens[] = {
+		{SOF_TKN_SRC_RATE_OUT, SND_SOC_TPLG_TUPLE_TYPE_WORD, tplg_token_get_uint32_t,
+		 offsetof(struct ipc4_config_src, sink_rate), 0	},
+	};
+	int size = ctx->widget->priv.size;
 	int ret;
 
-	tplg_ctl = calloc(ctx->hdr->payload_size, 1);
-	if (!tplg_ctl)
+	comp_info->ipc_size = sizeof(struct ipc4_config_src);
+	src = calloc(comp_info->ipc_size, 1);
+	if (!src)
 		return -ENOMEM;
 
-	ret = tplg_new_src(ctx, &src->comp, MAX_TPLG_OBJECT_SIZE,
-			   tplg_ctl, ctx->hdr->payload_size);
-	if (ret < 0) {
-		SNDERR("error: failed to create src\n");
-		goto out;
-	}
+	comp_info->ipc_payload = src;
 
+	ret = tplg_parse_widget_audio_formats(ctx);
+	if (ret < 0)
+		goto out;
+
+	ret = sof_parse_token_sets(src, src4_tokens, ARRAY_SIZE(src4_tokens),
+				   array, size, 1, 0);
+	if (ret < 0)
+		return ret;
+
+	/* FIXME: move this to when the widget is actually set up */
+	comp_info->instance_id = plug->instance_ids[SND_SOC_TPLG_DAPM_SRC]++;
+	comp_info->module_id = 0x8;
+
+	plug_setup_widget_ipc_msg(comp_info);
+
+	return 0;
 out:
-	free(tplg_ctl);
+	free(src);
 	return ret;
 }
 
@@ -863,6 +879,7 @@ int plug_parse_topology(snd_sof_plug_t *plug)
 			return -EINVAL;
 		}
 	}
+
 out:
 	return ret;
 }

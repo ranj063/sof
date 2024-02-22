@@ -156,6 +156,7 @@ static int plug_pcm_start(snd_pcm_ioplug_t *io)
 
 			/* work out delay TODO: fix ALSA reader */
 			delay = pcm->frame_us * io->period_size / 500;
+			delay = 1000;
 			plug_timespec_add_ms(&pcm->wait_timeout, delay);
 
 			/* wait for sof-pipe writer to produce data or timeout */
@@ -381,6 +382,7 @@ static snd_pcm_sframes_t plug_pcm_read(snd_pcm_ioplug_t *io, const snd_pcm_chann
 
 		/* work out delay TODO: fix ALSA reader */
 		delay = pcm->frame_us * frames / 500;
+		delay = 1000;
 		plug_timespec_add_ms(&pcm->wait_timeout, delay);
 
 		/* wait for sof-pipe writer to produce data or timeout */

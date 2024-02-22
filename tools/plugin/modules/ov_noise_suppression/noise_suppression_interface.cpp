@@ -100,6 +100,8 @@ extern "C" {
 		float scale = 1.0f / std::numeric_limits<int16_t>::max();
 		int i, j, ch;
 
+		std::cout << "frame count %d" << frame_count;
+
 		/*
 		 * The noise suppression model only supports mono, so process each channel
 		 * separately

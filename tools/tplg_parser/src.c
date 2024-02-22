@@ -15,6 +15,7 @@
 #include <ipc/topology.h>
 #include <sof/lib/uuid.h>
 #include <sof/ipc/topology.h>
+#include <src/src.h>
 #include <tplg_parser/topology.h>
 #include <tplg_parser/tokens.h>
 
@@ -53,9 +54,10 @@ static int src_ipc3_build(struct tplg_context *ctx, void *_src)
 	return 0;
 }
 
-/* ASRC - IPC4 */
+/* SRC - IPC4 */
 static const struct sof_topology_token src4_tokens[] = {
-	/* TODO */
+	{SOF_TKN_SRC_RATE_OUT, SND_SOC_TPLG_TUPLE_TYPE_WORD, tplg_token_get_uint32_t,
+		offsetof(struct ipc4_config_src, sink_rate), 0	},
 };
 
 static const struct sof_topology_token_group src_ipc4_tokens[] = {
@@ -64,8 +66,7 @@ static const struct sof_topology_token_group src_ipc4_tokens[] = {
 
 static int src_ipc4_build(struct tplg_context *ctx, void *src)
 {
-	/* TODO */
-	return 0;
+	return tplg_parse_widget_audio_formats(ctx);
 }
 
 static const struct sof_topology_module_desc src_ipc[] = {
