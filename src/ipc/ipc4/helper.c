@@ -127,6 +127,10 @@ __cold struct comp_dev *comp_new_ipc4(struct ipc4_module_init_instance *module_i
 		return NULL;
 	}
 
+	tr_info(&ipc_tr, "comp_new_ipc4 module_id = 0x%x, instance_id = 0x%x, comp_id = 0x%x",
+		(uint32_t)module_init->primary.r.module_id,
+		(uint32_t)module_init->primary.r.instance_id, comp_id);
+
 	if (module_init->extension.r.core_id >= CONFIG_CORE_COUNT) {
 		tr_err(&ipc_tr, "ipc: comp->core = %u", (uint32_t)module_init->extension.r.core_id);
 		return NULL;
@@ -259,6 +263,10 @@ __cold static int ipc4_create_pipeline(struct ipc4_pipeline_create *pipe_desc)
 	pipe->sched_id = 0xFFFFFFFF;
 
 	pipe->core = pipe_desc->extension.r.core_id;
+
+	pipe->direction_set = pipe_desc->extension.r.direction_set;
+	if (pipe->direction_set)
+		pipe->direction = pipe_desc->extension.r.direction;
 
 	/* allocate the IPC pipeline container */
 	ipc_pipe = rzalloc(SOF_MEM_FLAG_USER | SOF_MEM_FLAG_COHERENT,
@@ -902,6 +910,8 @@ __cold static int ipc4_update_comps_direction(struct ipc *ipc, uint32_t ppl_id)
 			continue;
 		}
 
+		tr_err(&ipc_tr, "ipc: cannot update direction for module %#x pipeline id %d",
+		       IPC4_MOD_ID(dev_comp_id(icd->cd)), ppl_id);
 		return -EINVAL;
 	}
 	return 0;
@@ -913,8 +923,10 @@ int ipc4_pipeline_complete(struct ipc *ipc, uint32_t comp_id, uint32_t cmd)
 	int ret;
 
 	ipc_pipe = ipc_get_pipeline_by_id(ipc, comp_id);
-	if (!ipc_pipe)
+	if (!ipc_pipe) {
+		tr_err(&ipc_tr, "ipc: no such pipeline %u", comp_id);
 		return -EINVAL;
+	}
 
 	/* Pass IPC to target core */
 	if (!cpu_is_me(ipc_pipe->core))

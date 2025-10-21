@@ -313,6 +313,8 @@ int pipeline_complete(struct pipeline *p, struct comp_dev *source,
 	/* show heap status */
 	heap_trace_all(0);
 
+	if (ret < 0)
+		pipe_err(p, "pipeline complete failed\n");
 	return ret;
 }
 

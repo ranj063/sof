@@ -301,8 +301,10 @@ int ipc4_pipeline_prepare(struct ipc_comp_dev *ppl_icd, uint32_t cmd)
 			break;
 		case COMP_STATE_READY:
 			host = pipeline_get_host_dev(ppl_icd);
-			if (!host)
+			if (!host) {
+				tr_err(&ipc_tr, "ipc4_pipeline_prepare(): can't get host dev");
 				return IPC4_INVALID_RESOURCE_ID;
+			}
 
 			tr_dbg(&ipc_tr, "pipeline %d: set params", ppl_icd->id);
 			ret = ipc4_pcm_params(host);
@@ -338,6 +340,9 @@ int ipc4_pipeline_prepare(struct ipc_comp_dev *ppl_icd, uint32_t cmd)
 		case COMP_STATE_INIT:
 			tr_dbg(&ipc_tr, "pipeline %d: pause from init", ppl_icd->id);
 			ret = ipc4_pipeline_complete(ipc, ppl_icd->id, cmd);
+			if (ret)
+				tr_err(&ipc_tr, "pipeline %d: pause from init failed %d",
+				       ppl_icd->id, ret);
 			break;
 		default:
 			/* No action needed */
