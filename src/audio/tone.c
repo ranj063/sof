@@ -94,7 +94,8 @@ struct comp_data {
 	uint32_t rate;
 	struct tone_state sg[PLATFORM_MAX_CHANNELS];
 	int (*tone_func)(struct processing_module *mod, struct sof_sink *sink,
-			 uint32_t frames);
+			 uint32_t frames, int32_t *output_pos, int32_t *output_start,
+			 int32_t output_cirbuf_size);
 };
 
 static int32_t tonegen(struct tone_state *sg);
@@ -105,12 +106,10 @@ static void tonegen_update_f(struct tone_state *sg, int32_t f);
  * Tone generator algorithm code
  */
 static int tone_s32_default(struct processing_module *mod, struct sof_sink *sink,
-			    uint32_t frames)
+			    uint32_t frames, int32_t *output_pos, int32_t *output_start,
+			    int32_t output_cirbuf_size)
 {
 	struct comp_data *cd = module_get_private_data(mod);
-	int32_t *output_pos, *output_start, output_cirbuf_size;
-	const size_t output_frames = sink_get_free_frames(sink);
-	const size_t output_frame_bytes = sink_get_frame_bytes(sink);
 	int32_t *output_end;
 	int nch = cd->channels;
 	int i;
@@ -119,14 +118,12 @@ static int tone_s32_default(struct processing_module *mod, struct sof_sink *sink
 	int n_min;
 	int ret;
 
-	ret = sink_get_buffer_s32(sink, output_frames * output_frame_bytes,
-				  &output_pos, &output_start, &output_cirbuf_size);
-	if (ret)
-		return -ENODATA;
-
 	output_end = output_start + output_cirbuf_size;
 
 	n = frames * nch;
+
+	comp_err(mod->dev, "tone_s32_default() frames %d nch %d n %d\n",
+			frames, nch, n);
 	while (n > 0) {
 		n_wrap_dest = output_end - output_pos;
 
@@ -138,6 +135,7 @@ static int tone_s32_default(struct processing_module *mod, struct sof_sink *sink
 			for (i = 0; i < nch; i++) {
 				tonegen_control(&cd->sg[i]);
 				*output_pos = tonegen(&cd->sg[i]);
+				comp_err(mod->dev, "tone_s32_default() %d\n", *output_pos);
 				output_pos++;
 			}
 		}
@@ -464,8 +462,6 @@ static int tone_process(struct processing_module *mod,
 	int32_t *output_pos, *output_start, output_cirbuf_size;
 	int ret;
 
-	comp_dbg(dev, "tone_process()");
-
 	/* tone generator only ever has 1 sink */
 	output_frames = sink_get_free_frames(sinks[0]);
 	output_frame_bytes = sink_get_frame_bytes(sinks[0]);
@@ -475,14 +471,18 @@ static int tone_process(struct processing_module *mod,
 	if (ret)
 		return -ENODATA;
 
+
 	/* Test that sink has enough free frames. Then run once to maintain
 	 * low latency and steady load for tones.
 	 */
 	if (output_frames * output_frame_bytes >= mod->period_bytes) {
 		uint32_t frames = mod->period_bytes / output_frame_bytes;
 
+		comp_err(dev, "tone_process() frames %d \n", frames);
+
 		/* create tone */
-		ret = cd->tone_func(mod, sinks[0], frames);
+		ret = cd->tone_func(mod, sinks[0], frames, output_pos, output_start,
+				    output_cirbuf_size);
 
 		/* calc new free */
 		sink_commit_buffer(sink, mod->period_bytes);

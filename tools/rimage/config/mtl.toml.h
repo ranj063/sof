@@ -78,6 +78,10 @@
 #include <audio/mux/mux.toml>
 #endif
 
+#if defined(CONFIG_COMP_TONE) || defined(LLEXT_FORCE_ALL_MODULAR)
+#include <audio/tone.toml>
+#endif
+
 #ifdef CONFIG_SAMPLE_KEYPHRASE
 #include <samples/audio/detect_test.toml>
 #endif

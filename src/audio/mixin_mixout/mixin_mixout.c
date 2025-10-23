@@ -483,6 +483,8 @@ static int mixin_process(struct processing_module *mod,
 		if (source_avail_frames == 0) {
 			frame_bytes = sink_get_frame_bytes(mixout_mod->sinks[0]);
 
+			comp_err(mod->dev, "mixin generating silence\n");
+
 			/* generate silence */
 			silence(&mixout_data->acquired_buf, start_frame * frame_bytes,
 				mixout_data->mixed_frames * frame_bytes,
