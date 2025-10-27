@@ -70,6 +70,10 @@ index = __COUNTER__
 #include <audio/up_down_mixer/up_down_mixer.toml>
 #endif
 
+#if defined(CONFIG_COMP_TONE) || defined(LLEXT_FORCE_ALL_MODULAR)
+#include <audio/tone.toml>
+#endif
+
 #ifdef CONFIG_PROBE
 #include <probe/probe.toml>
 #endif
