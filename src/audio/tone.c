@@ -94,52 +94,157 @@ struct comp_data {
 	uint32_t rate;
 	struct tone_state sg[PLATFORM_MAX_CHANNELS];
 	int (*tone_func)(struct processing_module *mod, struct sof_sink *sink,
-			 uint32_t frames, int32_t *output_pos, int32_t *output_start,
-			 int32_t output_cirbuf_size);
+			 struct sof_source *source);
 };
 
 static int32_t tonegen(struct tone_state *sg);
 static void tonegen_control(struct tone_state *sg);
 static void tonegen_update_f(struct tone_state *sg, int32_t f);
 
-/*
- * Tone generator algorithm code
- */
-static int tone_s32_default(struct processing_module *mod, struct sof_sink *sink,
-			    uint32_t frames, int32_t *output_pos, int32_t *output_start,
-			    int32_t output_cirbuf_size)
+static int tone_s32_passthrough(struct processing_module *mod, struct sof_sink *sink,
+				struct sof_source *source)
 {
 	struct comp_data *cd = module_get_private_data(mod);
-	int32_t *output_end;
+	size_t output_frame_bytes, output_frames;
+	size_t input_frame_bytes, input_frames;
+	int32_t *output_pos, *output_start, output_cirbuf_size;
+	int32_t const *input_pos, *input_start, *input_end;
+	int32_t *output_end, input_cirbuf_size;
+	uint32_t frames, bytes;
 	int nch = cd->channels;
-	int i;
 	int n;
-	int n_wrap_dest;
-	int n_min;
+	int ret;
+
+	/* tone generator only ever has 1 sink */
+	output_frames = sink_get_free_frames(sink);
+	output_frame_bytes = sink_get_frame_bytes(sink);
+	output_frames = mod->period_bytes / output_frame_bytes;
+
+	ret = sink_get_buffer_s32(sink, output_frames * output_frame_bytes,
+				  &output_pos, &output_start, &output_cirbuf_size);
+	if (ret) {
+		comp_err(mod->dev, "tone_s32_passthrough(): sink_get_buffer_s32() failed");
+		return -ENODATA;
+	}
+
+	input_frames = source_get_data_frames_available(source);
+	input_frame_bytes = source_get_frame_bytes(source);
+
+	ret = source_get_data_s32(source, input_frames * input_frame_bytes,
+					&input_pos, &input_start, &input_cirbuf_size);
+	if (ret) {
+		comp_err(mod->dev, "tone_s32_passthrough(): source_get_data_s32() failed");
+		return -ENODATA;
+	}
+	input_end = input_start + input_cirbuf_size;
+
+	frames = MIN(output_frames, input_frames);
+
+	if (frames * output_frame_bytes >= mod->period_bytes)
+		frames = mod->period_bytes / output_frame_bytes;
+	bytes = frames * output_frame_bytes;
 
 	output_end = output_start + output_cirbuf_size;
 
 	n = frames * nch;
-	while (n > 0) {
-		n_wrap_dest = output_end - output_pos;
 
-		/* Process until wrap or completed n */
+	while (n > 0) {
+		int n_wrap_source, n_wrap_dest, n_min;
+		int i;
+
+		n_wrap_dest = output_end - output_pos;
+		n_wrap_source = input_end - input_pos;
+
+		/* Process until source/dest wrap or completed n */
 		n_min = (n < n_wrap_dest) ? n : n_wrap_dest;
+		n_min = (n_min < n_wrap_source) ? n_min : n_wrap_source;
 		while (n_min > 0) {
 			n -= nch;
 			n_min -= nch;
 			for (i = 0; i < nch; i++) {
 				tonegen_control(&cd->sg[i]);
-				*output_pos = tonegen(&cd->sg[i]);
+				*output_pos = *input_pos;
 				output_pos++;
+				input_pos++;
 			}
 		}
 
-		/* Wrap destination buffer */
-		output_pos = output_start;
+		/* Wrap destination/source buffer */
+		if (output_pos >= output_end)
+			output_pos = output_start;
+		if (input_pos >= input_end)
+			input_pos = input_start;
 	}
 
-	return 0;
+	ret = sink_commit_buffer(sink, bytes);
+	if (ret)
+		return ret;
+
+	return source_release_data(source, bytes);
+}
+
+/*
+ * Tone generator algorithm code
+ */
+static int tone_s32_default(struct processing_module *mod, struct sof_sink *sink,
+			    struct sof_source *source)
+{
+	struct comp_data *cd = module_get_private_data(mod);
+	size_t output_frame_bytes, output_frames;
+	int32_t *output_pos, *output_start, output_cirbuf_size;
+	int32_t *output_end;
+	uint32_t frames, bytes;
+	int nch = cd->channels;
+	int i;
+	int n;
+	int n_wrap_dest;
+	int n_min;
+	int ret;
+
+	if (source)
+		return tone_s32_passthrough(mod, sink, source);
+
+	/* tone generator only ever has 1 sink */
+	output_frames = sink_get_free_frames(sink);
+	output_frame_bytes = sink_get_frame_bytes(sink);
+	output_frames = mod->period_bytes / output_frame_bytes;
+
+	ret = sink_get_buffer_s32(sink, output_frames * output_frame_bytes,
+				  &output_pos, &output_start, &output_cirbuf_size);
+	if (ret)
+		return -ENODATA;
+
+	frames = output_frames;
+
+	if (frames * output_frame_bytes >= mod->period_bytes)
+		frames = mod->period_bytes / output_frame_bytes;
+	bytes = frames * output_frame_bytes;
+
+	output_end = output_start + output_cirbuf_size;
+
+	n = frames * nch;
+	if (!source) {
+		while (n > 0) {
+			n_wrap_dest = output_end - output_pos;
+
+			/* Process until wrap or completed n */
+			n_min = (n < n_wrap_dest) ? n : n_wrap_dest;
+			while (n_min > 0) {
+				n -= nch;
+				n_min -= nch;
+				for (i = 0; i < nch; i++) {
+					tonegen_control(&cd->sg[i]);
+					*output_pos = tonegen(&cd->sg[i]);
+					output_pos++;
+				}
+			}
+
+			/* Wrap destination buffer */
+			output_pos = output_start;
+		}
+	}
+
+	return sink_commit_buffer(sink, bytes);
 }
 
 static int32_t tonegen(struct tone_state *sg)
@@ -386,36 +491,11 @@ static int tone_process(struct processing_module *mod,
 			struct sof_sink **sinks, int num_of_sinks)
 {
 	struct comp_data *cd = module_get_private_data(mod);
-	struct sof_sink *sink = sinks[0];
-	size_t output_frame_bytes, output_frames;
-	int32_t *output_pos, *output_start, output_cirbuf_size;
-	int ret;
 
-	/* tone generator only ever has 1 sink */
-	output_frames = sink_get_free_frames(sinks[0]);
-	output_frame_bytes = sink_get_frame_bytes(sinks[0]);
+	if (num_of_sources > 0)
+		return cd->tone_func(mod, sinks[0], sources[0]);
 
-	ret = sink_get_buffer_s32(sinks[0], output_frames * output_frame_bytes,
-				  &output_pos, &output_start, &output_cirbuf_size);
-	if (ret)
-		return -ENODATA;
-
-
-	/* Test that sink has enough free frames. Then run once to maintain
-	 * low latency and steady load for tones.
-	 */
-	if (output_frames * output_frame_bytes >= mod->period_bytes) {
-		uint32_t frames = mod->period_bytes / output_frame_bytes;
-
-		/* create tone */
-		ret = cd->tone_func(mod, sinks[0], frames, output_pos, output_start,
-				    output_cirbuf_size);
-
-		/* calc new free */
-		sink_commit_buffer(sink, mod->period_bytes);
-	}
-
-	return ret;
+	return cd->tone_func(mod, sinks[0], NULL);
 }
 
 static int tone_prepare(struct processing_module *mod, struct sof_source **sources,
