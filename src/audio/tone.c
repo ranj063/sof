@@ -48,6 +48,10 @@
 #define TONE_FREQUENCY_DEFAULT TONE_FREQ(997.0)
 #define TONE_NUM_FS            13       /* Table size for 8-192 kHz range */
 
+#define TONE_MODE_TONEGEN	0
+#define TONE_MODE_PASSTHROUGH	1
+#define TONE_MODE_SILENCE	2
+
 LOG_MODULE_REGISTER(tone, CONFIG_SOF_LOG_LEVEL);
 
 /* tone uuid : 04e3f894-2c5c-4f2e-8dc1694eeaab53fa */
@@ -95,6 +99,7 @@ struct comp_data {
 	struct tone_state sg[PLATFORM_MAX_CHANNELS];
 	int (*tone_func)(struct processing_module *mod, struct sof_sink *sink,
 			 struct sof_source *source);
+	int mode;
 };
 
 static int32_t tonegen(struct tone_state *sg);
@@ -201,7 +206,7 @@ static int tone_s32_default(struct processing_module *mod, struct sof_sink *sink
 	int n_min;
 	int ret;
 
-	if (source)
+	if (cd->mode == TONE_MODE_PASSTHROUGH)
 		return tone_s32_passthrough(mod, sink, source);
 
 	/* tone generator only ever has 1 sink */
@@ -233,8 +238,17 @@ static int tone_s32_default(struct processing_module *mod, struct sof_sink *sink
 				n -= nch;
 				n_min -= nch;
 				for (i = 0; i < nch; i++) {
-					tonegen_control(&cd->sg[i]);
-					*output_pos = tonegen(&cd->sg[i]);
+					switch (cd->mode) {
+					case TONE_MODE_TONEGEN:
+						tonegen_control(&cd->sg[i]);
+						*output_pos = tonegen(&cd->sg[i]);
+						break;
+					case TONE_MODE_SILENCE:
+						*output_pos = 0;
+						break;
+					default:
+						break;
+					}
 					output_pos++;
 				}
 			}
@@ -423,6 +437,7 @@ static int tonegen_init(struct tone_state *sg, int32_t fs, int32_t f, int32_t a)
 static int tone_init(struct processing_module *mod)
 {
 	struct module_data *mod_data = &mod->priv;
+	struct module_config *mod_config = &mod->priv.cfg;
 	struct comp_dev *dev = mod->dev;
 	struct comp_data *cd;
 	int i;
@@ -436,6 +451,26 @@ static int tone_init(struct processing_module *mod)
 	mod_data->private = cd;
 
 	cd->tone_func = tone_s32_default;
+
+	/* set default tone gen mode */
+	cd->mode = TONE_MODE_TONEGEN;
+
+	/*
+	 * set direction for the comp. In the case of the tone generator being used for
+	 * echo reference, the number of input pins will be non-zero
+	 */
+	if (mod_config->nb_input_pins > 0) {
+		dev->direction = SOF_IPC_STREAM_CAPTURE;
+		cd->mode = TONE_MODE_SILENCE;
+
+	} else {
+		dev->direction = SOF_IPC_STREAM_PLAYBACK;
+		cd->mode = TONE_MODE_TONEGEN;
+	}
+
+	comp_err(dev, "tone_init(): direction = %d mode %d", dev->direction, cd->mode);
+
+	dev->direction_set = true;
 
 	/* Reset tone generator and set channels volumes to default */
 	for (i = 0; i < PLATFORM_MAX_CHANNELS; i++)
@@ -542,12 +577,46 @@ static int tone_reset(struct processing_module *mod)
 	return 0;
 }
 
+static int tone_bind(struct processing_module *mod, struct bind_info *bind_data)
+{
+	struct comp_data *cd = module_get_private_data(mod);
+
+	/* nothing to do when tone is not the sink */
+	if (bind_data->bind_type != COMP_BIND_TYPE_SOURCE)
+		return 0;
+
+	/* set passthrough mode when tone generator is bound to another module as a sink */
+	cd->mode = TONE_MODE_PASSTHROUGH;
+
+	comp_err(mod->dev, "bind tone direction = %d mode %d", mod->dev->direction, cd->mode);
+
+	return 0;
+}
+
+static int tone_unbind(struct processing_module *mod, struct bind_info *unbind_data)
+{
+	struct comp_data *cd = module_get_private_data(mod);
+
+	/* nothing to do when tone is not the sink */
+	if (unbind_data->bind_type != COMP_BIND_TYPE_SOURCE)
+		return 0;
+
+	/* set silence mode when tone generator is unbound from a source module */
+	cd->mode = TONE_MODE_SILENCE;
+
+	comp_err(mod->dev, "unbind tone direction = %d mode %d", mod->dev->direction, cd->mode);
+
+	return 0;
+}
+
 static const struct module_interface tone_interface = {
 	.init = tone_init,
 	.prepare = tone_prepare,
 	.process = tone_process,
 	.reset = tone_reset,
 	.free = tone_free,
+	.bind = tone_bind,
+	.unbind = tone_unbind,
 };
 
 #if CONFIG_COMP_TONE_MODULE
