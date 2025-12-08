@@ -279,6 +279,7 @@ void host_common_update(struct host_data *hd, struct comp_dev *dev, uint32_t byt
 #else
 		hd->local_pos = 0;
 #endif
+	tr_err(&host_tr, "host_common_update(): local position %d bytes %d host_size %d host_period_bytes %d\n", hd->local_pos, bytes, hd->host_size, hd->host_period_bytes);
 	if (hd->cont_update_posn)
 		update_mailbox = true;
 
@@ -306,8 +307,19 @@ void host_common_update(struct host_data *hd, struct comp_dev *dev, uint32_t byt
 		pipeline_get_timestamp(dev->pipeline, dev, &hd->posn);
 		mailbox_stream_write(dev->pipeline->posn_offset,
 				     &hd->posn, sizeof(hd->posn));
-		if (send_ipc)
+		if (send_ipc) {
+#if CONFIG_IPC_MAJOR_3
 			ipc_msg_send(hd->msg, &hd->posn, false);
+#elif CONFIG_IPC_MAJOR_4
+			struct sof_ipc4_notify_module_data *msg_module_data;
+
+			msg_module_data = (struct sof_ipc4_notify_module_data *)hd->msg->tx_data;
+			//tr_err(&host_tr, "host_common_update(): sending position %d\n", hd->posn.host_posn);
+			memcpy_s(msg_module_data->event_data, sizeof(hd->posn),
+				 &hd->posn, sizeof(hd->posn));
+			ipc_msg_send(hd->msg, hd->msg->tx_data, false);
+#endif
+		}
 	}
 }
 
@@ -724,6 +736,7 @@ __cold int host_common_new(struct host_data *hd, struct comp_dev *dev,
 	dma_sg_init(&hd->host.elem_array);
 	dma_sg_init(&hd->local.elem_array);
 
+#if CONFIG_IPC_MAJOR_3
 	ipc_build_stream_posn(&hd->posn, SOF_IPC_STREAM_POSITION, config_id);
 
 	hd->msg = ipc_msg_init(hd->posn.rhdr.hdr.cmd, sizeof(hd->posn));
@@ -732,6 +745,32 @@ __cold int host_common_new(struct host_data *hd, struct comp_dev *dev,
 		sof_dma_put(hd->dma);
 		return -ENOMEM;
 	}
+#elif CONFIG_IPC_MAJOR_4
+	struct ipc_msg msg_proto;
+	struct comp_ipc_config *ipc_config = &dev->ipc_config;
+	union ipc4_notification_header *primary =
+		(union ipc4_notification_header *)&msg_proto.header;
+	struct sof_ipc4_notify_module_data *msg_module_data;
+	struct ipc_msg *msg;
+
+	/* Clear header, extension, and other ipc_msg members */
+	memset_s(&msg_proto, sizeof(msg_proto), 0, sizeof(msg_proto));
+	primary->r.notif_type = SOF_IPC4_MODULE_NOTIFICATION;
+	primary->r.type = SOF_IPC4_GLB_NOTIFICATION;
+	primary->r.rsp = SOF_IPC4_MESSAGE_DIR_MSG_REQUEST;
+	primary->r.msg_tgt = SOF_IPC4_MESSAGE_TARGET_FW_GEN_MSG;
+	msg = ipc_msg_w_ext_init(msg_proto.header, msg_proto.extension,
+				sizeof(struct sof_ipc4_notify_module_data) +
+				sizeof(hd->posn));
+	if (!msg)
+		return -ENOMEM;
+
+	msg_module_data = (struct sof_ipc4_notify_module_data *)msg->tx_data;
+	msg_module_data->instance_id = IPC4_INST_ID(ipc_config->id);
+	msg_module_data->module_id = IPC4_MOD_ID(ipc_config->id);
+	msg_module_data->event_data_size = sizeof(hd->posn);
+	hd->msg = msg;
+#endif
 	hd->chan = NULL;
 	hd->copy_type = COMP_COPY_NORMAL;
 
@@ -909,6 +948,8 @@ int host_common_params(struct host_data *hd, struct comp_dev *dev,
 	}
 
 	period_bytes = dev->frames * get_frame_bytes(params->frame_fmt, params->channels);
+	/* hack for sending the position notification */
+	hd->host_period_bytes = period_bytes;
 
 	if (!period_bytes) {
 		comp_err(dev, "invalid period_bytes");

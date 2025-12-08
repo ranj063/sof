@@ -326,6 +326,10 @@ int copier_host_params(struct copier_data *cd, struct comp_dev *dev,
 	int ret;
 
 	component_set_nearest_period_frames(dev, params->rate);
+
+	/* set cont_update_posn as a hack to send position updates to the host for compress */
+	params->cont_update_posn = 1;
+	params->no_stream_position = 0;
 	ret = host_common_params(cd->hd, dev, params,
 				 copier_notifier_cb);
 
