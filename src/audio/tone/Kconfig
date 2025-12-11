@@ -12,4 +12,4 @@ config COMP_TONE
 	  audio tones (sine waves) at specified frequencies when the Tone
 	  mode is enabled. The two other modes it supports are silence where
 	  it generates 0s and passthrough where the input is passed to the output.
-	  Warning: This component is deprecated for IPC_MAJOR_3.
+	  Warning: This component is unavailable for IPC_MAJOR_3.
