@@ -537,6 +537,7 @@ static const struct module_interface cadence_codec_interface = {
 	.reset = cadence_codec_reset,
 	.free = cadence_codec_free,
 	.is_ready_to_process = cadence_is_ready_to_process,
+	.register_codec_caps = cadence_register_codec_capabilities,
 };
 
 DECLARE_MODULE_ADAPTER(cadence_codec_interface, cadence_codec_uuid, cadence_codec_tr);

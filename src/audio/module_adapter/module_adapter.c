@@ -1582,3 +1582,14 @@ int module_adapter_ts_get_op(struct comp_dev *dev, struct timestamp_data *tsd)
 	return -EOPNOTSUPP;
 }
 EXPORT_SYMBOL(module_adapter_ts_get_op);
+
+int module_adapter_register_codec_caps(const struct comp_driver *drv)
+{
+	const struct module_interface *const interface = drv->adapter_ops;
+
+	if (interface->register_codec_caps)
+		return interface->register_codec_caps();
+
+	return 0;
+}
+EXPORT_SYMBOL(module_adapter_register_codec_caps);

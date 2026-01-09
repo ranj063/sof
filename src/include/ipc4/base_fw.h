@@ -294,6 +294,9 @@ enum ipc4_basefw_params {
 
 	/* Set policy mask for mic privacy in FW managed mode */
 	IPC4_SET_MIC_PRIVACY_FW_MANAGED_POLICY_MASK = 36,
+
+	/* Query the codec capabilities registered in the firmware */
+	IPC4_GET_CODEC_CAPABILITIES = 37,
 };
 
 enum ipc4_fw_config_params {
@@ -539,6 +542,14 @@ struct ipc4_global_perf_data {
 	uint32_t      perf_item_count;
 	/* Array of global performance measurements */
 	struct ipc4_perf_data_item  perf_items[1];
+} __attribute__((packed, aligned(4)));
+
+struct ipc4_global_codec_caps_data {
+	/* Specifies number of items in caps_items array */
+	uint32_t codec_caps_count;
+
+	/* Array of global codec capabilities */
+	uint32_t  caps_items[0];
 } __attribute__((packed, aligned(4)));
 
 enum ipc4_low_latency_interrupt_source {

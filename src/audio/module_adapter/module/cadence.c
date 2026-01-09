@@ -17,61 +17,81 @@ struct cadence_api cadence_api_table[] = {
 #ifdef CONFIG_CADENCE_CODEC_WRAPPER
 	{
 		.id = CADENCE_CODEC_WRAPPER_ID,
-		.api = cadence_api_function
+		.api = cadence_api_function,
+		.codec_id = SND_AUDIOCODEC_BESPOKE,
+		.direction = SOF_IPC_STREAM_PLAYBACK,
 	},
 #endif
 #ifdef CONFIG_CADENCE_CODEC_AAC_DEC
 	{
 		.id = CADENCE_CODEC_AAC_DEC_ID,
 		.api = xa_aac_dec,
+		.codec_id = SND_AUDIOCODEC_AAC,
+		.direction = SOF_IPC_STREAM_PLAYBACK,
 	},
 #endif
 #ifdef CONFIG_CADENCE_CODEC_BSAC_DEC
 	{
 		.id = CADENCE_CODEC_BSAC_DEC_ID,
 		.api = xa_bsac_dec,
+		.codec_id = SND_AUDIOCODEC_BESPOKE,
+		.direction = SOF_IPC_STREAM_PLAYBACK,
 	},
 #endif
 #ifdef CONFIG_CADENCE_CODEC_DAB_DEC
 	{
 		.id = CADENCE_CODEC_DAB_DEC_ID,
 		.api = xa_dabplus_dec,
+		.codec_id = SND_AUDIOCODEC_BESPOKE,
+		.direction = SOF_IPC_STREAM_PLAYBACK,
 	},
 #endif
 #ifdef CONFIG_CADENCE_CODEC_DRM_DEC
 	{
 		.id = CADENCE_CODEC_DRM_DEC_ID,
 		.api = xa_drm_dec,
+		.codec_id = SND_AUDIOCODEC_BESPOKE,
+		.direction = SOF_IPC_STREAM_PLAYBACK,
 	},
 #endif
 #ifdef CONFIG_CADENCE_CODEC_MP3_DEC
 	{
 		.id = CADENCE_CODEC_MP3_DEC_ID,
 		.api = xa_mp3_dec,
+		.codec_id = SND_AUDIOCODEC_MP3,
+		.direction = SOF_IPC_STREAM_PLAYBACK,
 	},
 #endif
 #ifdef CONFIG_CADENCE_CODEC_MP3_ENC
 	{
 		.id = CADENCE_CODEC_MP3_ENC_ID,
 		.api = xa_mp3_enc,
+		.codec_id = SND_AUDIOCODEC_MP3,
+		.direction = SOF_IPC_STREAM_CAPTURE,
 	},
 #endif
 #ifdef CONFIG_CADENCE_CODEC_SBC_DEC
 	{
 		.id = CADENCE_CODEC_SBC_DEC_ID,
 		.api = xa_sbc_dec,
+		.codec_id = SND_AUDIOCODEC_BESPOKE,
+		.direction = SOF_IPC_STREAM_PLAYBACK,
 	},
 #endif
 #ifdef CONFIG_CADENCE_CODEC_VORBIS_DEC
 	{
 		.id = CADENCE_CODEC_VORBIS_DEC_ID,
 		.api = xa_vorbis_dec,
+		.codec_id = SND_AUDIOCODEC_VORBIS,
+		.direction = SOF_IPC_STREAM_PLAYBACK,
 	},
 #endif
 #ifdef CONFIG_CADENCE_CODEC_SRC_PP
 	{
 		.id = CADENCE_CODEC_SRC_PP_ID,
 		.api = xa_src_pp,
+		.codec_id = SND_AUDIOCODEC_BESPOKE,
+		.direction = SOF_IPC_STREAM_PLAYBACK,
 	},
 #endif
 };
@@ -503,5 +523,23 @@ int cadence_codec_process_data(struct processing_module *mod)
 		return ret;
 	}
 
+	return 0;
+}
+
+/* Register Cadence codec capabilities */
+int cadence_register_codec_capabilities(void)
+{
+	int n_apis = cadence_api_table_size();
+	int i, ret;
+
+	for (i = 0; i < n_apis; i++) {
+		ret = register_codec_capability(cadence_api_table[i].codec_id,
+						cadence_api_table[i].direction);
+		if (ret < 0) {
+			comp_cl_warn(drv, "failed to register codec capability for id %d",
+				     cadence_api_table[i].codec_id);
+			return ret;
+		}
+	}
 	return 0;
 }

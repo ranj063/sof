@@ -48,7 +48,9 @@ extern xa_codec_func_t xa_src_pp;
 /*****************************************************************************/
 struct cadence_api {
 	uint32_t id;
+	uint32_t codec_id; /* SND_AUDIOCODEC_* */
 	xa_codec_func_t *api;
+	uint32_t direction;
 };
 
 struct cadence_codec_data {
@@ -106,5 +108,6 @@ int cadence_init_codec_object(struct processing_module *mod);
 int cadence_codec_resolve_api(struct processing_module *mod);
 int cadence_codec_free(struct processing_module *mod);
 size_t cadence_api_table_size(void);
+int cadence_register_codec_capabilities(void);
 
 #endif /* __SOF_AUDIO_CADENCE_CODEC__ */

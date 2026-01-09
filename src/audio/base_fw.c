@@ -451,6 +451,25 @@ __cold static int basefw_pipeline_list_info_get(uint32_t *data_offset, char *dat
 	return IPC4_SUCCESS;
 }
 
+__cold static int base_fw_codec_capabilities_get(uint32_t *data_offset, char *data)
+{
+	struct ipc4_global_codec_caps_data *caps_data = (struct ipc4_global_codec_caps_data *)data;
+	struct comp_codec_capability caps[COMP_MAX_CODEC_CAPABILITIES];
+	int caps_count;
+
+	assert_can_be_cold();
+
+	caps_count = query_codec_capabilities(caps);
+	caps_data->codec_caps_count = caps_count;
+
+	for (int i = 0; i < caps_count; i++)
+		caps_data->caps_items[i] = caps[i].id | (caps[i].direction << 16);
+
+	*data_offset = sizeof(caps_data->codec_caps_count) + caps_count * sizeof(uint32_t);
+
+	return IPC4_SUCCESS;
+}
+
 __cold int set_perf_meas_state(const char *data)
 {
 	assert_can_be_cold();
@@ -614,7 +633,8 @@ __cold static int basefw_get_large_config(struct comp_dev *dev, uint32_t param_i
 		return io_global_perf_state_get(data_offset, data);
 	case IPC4_IO_GLOBAL_PERF_DATA:
 		return io_global_perf_data_get(data_offset, data);
-
+	case IPC4_GET_CODEC_CAPABILITIES:
+		return base_fw_codec_capabilities_get(data_offset, data);
 	/* TODO: add more support */
 	case IPC4_DSP_RESOURCE_STATE:
 	case IPC4_NOTIFICATION_MASK:

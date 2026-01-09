@@ -76,6 +76,7 @@ static const struct comp_driver comp_##adapter##_module = { \
 		.dai_ts_start = module_adapter_ts_start_op,\
 		.dai_ts_stop = module_adapter_ts_stop_op,\
 		.dai_ts_get = module_adapter_ts_get_op,\
+		.register_codec_caps = module_adapter_register_codec_caps,\
 	}, \
 	.adapter_ops = &(adapter), \
 }; \
@@ -428,6 +429,7 @@ int module_adapter_ts_get_op(struct comp_dev *dev, struct dai_ts_data *tsd);
 int module_adapter_ts_get_op(struct comp_dev *dev, struct timestamp_data *tsd);
 #endif
 
+int module_adapter_register_codec_caps(const struct comp_driver *drv);
 void module_update_buffer_position(struct input_stream_buffer *input_buffers,
 				   struct output_stream_buffer *output_buffers,
 				   uint32_t frames);

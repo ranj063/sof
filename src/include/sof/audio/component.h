@@ -576,6 +576,11 @@ struct comp_ops {
 	 * Usually shouldn't be __cold.
 	 */
 	uint64_t (*get_total_data_processed)(struct comp_dev *dev, uint32_t stream_no, bool input);
+
+	/**
+	 * Register component codec capabilities.
+	 */
+	int (*register_codec_caps)(const struct comp_driver *drv);
 };
 
 /**
@@ -701,6 +706,19 @@ struct comp_dev {
 	int32_t kcps_inc[CONFIG_CORE_COUNT];
 #endif
 };
+
+#define COMP_MAX_CODEC_CAPABILITIES 32
+
+struct comp_codec_capability {
+	uint32_t id;          /* Unique codec ID */
+	uint32_t direction;   /* Stream direction: playback or capture */
+};
+
+/* register codec capability in the global capabilities registry */
+int register_codec_capability(uint32_t id, uint32_t direction);
+
+/* query codec capabilities from the global capabilities registry */
+int query_codec_capabilities(struct comp_codec_capability *caps);
 
 /**
  * Get a pointer to the first comp_buffer object providing data to the component
@@ -991,6 +1009,14 @@ int comp_register(struct comp_driver_info *drv);
  * @param drv Component driver to be unregistered.
  */
 void comp_unregister(struct comp_driver_info *drv);
+
+/**
+ * Register codec capability in the global capabilities registry
+ * @param id Codec ID
+ * @param name Codec name
+ * @return 0 if succeeded, error code otherwise.
+ */
+int comp_register_codec_capability(uint32_t id, uint32_t direction, const char *name);
 
 /**
  * Set adapter ops for a dynamically created driver.

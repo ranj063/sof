@@ -284,6 +284,12 @@ struct module_interface {
 	 */
 	int (*trigger)(struct processing_module *mod, int cmd);
 
+	/**
+	 * Module specific codec capabilities registration procedure, called during component
+	 * registration
+	 */
+	int (*register_codec_caps)(void);
+
 	/*
 	 * Ops relevant only for the endpoint devices such as the host copier or DAI copier.
 	 * Other modules should not implement these.

@@ -42,6 +42,48 @@ SOF_DEFINE_REG_UUID(component);
 
 DECLARE_TR_CTX(comp_tr, SOF_UUID(component_uuid), LOG_LEVEL_INFO);
 
+static struct comp_codec_capability codec_capabilities[COMP_MAX_CODEC_CAPABILITIES];
+static size_t codec_capability_count;
+
+int register_codec_capability(uint32_t id, uint32_t direction)
+{
+	int i;
+
+	/* check if codec is already registered */
+	for (i = 0; i < codec_capability_count; i++) {
+		if (codec_capabilities[i].id == id &&
+		    codec_capabilities[i].direction == direction) {
+			tr_warn(&comp_tr, "Codec capability already registered: ID=%u, dir=%u",
+				id, direction);
+			return -EEXIST;
+		}
+	}
+
+	/* check if there's space to add a new codec capability */
+	if (codec_capability_count >= COMP_MAX_CODEC_CAPABILITIES) {
+		tr_err(&comp_tr, "Codec capability registry is full");
+		return -ENOMEM;
+	}
+
+	/* add new codec capability */
+	codec_capabilities[codec_capability_count].id = id;
+	codec_capabilities[codec_capability_count].direction = direction;
+	codec_capability_count++;
+
+	return 0;
+}
+EXPORT_SYMBOL(register_codec_capability);
+
+int query_codec_capabilities(struct comp_codec_capability caps[COMP_MAX_CODEC_CAPABILITIES])
+{
+	int i;
+
+	for (i = 0; i < codec_capability_count; i++)
+		caps[i] = codec_capabilities[i];
+
+	return codec_capability_count;
+}
+
 int comp_register(struct comp_driver_info *drv)
 {
 	struct comp_driver_list *drivers = comp_drivers_get();
@@ -50,6 +92,10 @@ int comp_register(struct comp_driver_info *drv)
 	key = k_spin_lock(&drivers->lock);
 	list_item_prepend(&drv->list, &drivers->list);
 	k_spin_unlock(&drivers->lock, key);
+
+	/* register codec capabilities if available */
+	if (drv->drv->ops.register_codec_caps)
+		return drv->drv->ops.register_codec_caps(drv->drv);
 
 	return 0;
 }
